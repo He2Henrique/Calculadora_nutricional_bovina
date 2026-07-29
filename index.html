@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<script src="./supabase.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#f4f1ec; color:#1b1917; font-family:'IBM Plex Sans',Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased; }
+  input, select, button { font-family:inherit; font-size:16px; }
+  input:focus, select:focus { outline:2px solid #a97c1e; outline-offset:-1px; }
+  a { color:#8a6413; }
+  a:hover { color:#a97c1e; }
+  ::placeholder { color:#a8a19a; }
+  @keyframes drawer-up { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  @keyframes fade-in { from { opacity:0; } to { opacity:1; } }
+</style>
+</helmet>
+<div style="min-height:100vh; padding:clamp(14px,3vw,32px) clamp(12px,3vw,24px) 72px; display:flex; flex-direction:column; align-items:center; gap:clamp(16px,2.4vw,28px)">
+
+  <header style="width:100%; max-width:1180px; display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:10px; border-bottom:2px solid #1b1917; padding-bottom:12px">
+    <div style="display:flex; flex-direction:column; gap:3px">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#8a6413">Formulação de rações</span>
+      <h1 style="margin:0; font-size:clamp(21px,4.6vw,30px); font-weight:600; letter-spacing:-0.01em; text-wrap:balance">{{ titulo }}</h1>
+    </div>
+    <p style="margin:0; max-width:420px; font-size:13px; line-height:1.5; color:#5d574f; text-wrap:pretty">Cadastre os níveis de garantia de cada produto, monte a mistura em % ou kg e veja a tabela nutricional do produto final.</p>
+  </header>
+
+  <section style="width:100%; max-width:1180px; background:#fffefb; border:1px solid #ddd6cb; border-radius:4px">
+    <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:14px; border-bottom:1px solid #e6e0d6">
+      <div style="display:flex; flex-wrap:wrap; align-items:baseline; gap:8px">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#a97c1e">01</span>
+        <h2 style="margin:0; font-size:16px; font-weight:600">Produtos cadastrados</h2>
+        <span style="font-size:12px; color:#8b847b; flex-basis:100%">toque no produto para editar os compostos</span>
+        <span style="font-size:12px; color:#b4451f; flex-basis:100%">{{ statusSupabase }}</span>
+      </div>
+      <button onClick="{{ addIngrediente }}" style="background:#1b1917; color:#f7f4ee; border:1px solid #1b1917; border-radius:3px; padding:10px 14px; font-size:13px; font-weight:500; min-height:44px; cursor:pointer">+ Produto</button>
+    </div>
+    <div style="display:flex; flex-direction:column">
+      <sc-for list="{{ ingredientes }}" as="ing" hint-placeholder-count="5">
+        <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid #efeae1">
+          <button onClick="{{ ing.onAbrir }}" style="display:flex; flex-direction:column; align-items:flex-start; gap:3px; background:none; border:none; padding:4px 0; text-align:left; cursor:pointer; min-height:44px; min-width:0">
+            <span style="font-size:15px; font-weight:600; color:#1b1917">{{ ing.nomeVisivel }}</span>
+            <span style="font-size:12px; color:#8b847b">{{ ing.resumo }}</span>
+          </button>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#8b847b; white-space:nowrap">
+            <span>R$/kg</span>
+            <input value="{{ ing.preco }}" onChange="{{ ing.onPreco }}" inputMode="decimal" placeholder="—" style="width:88px; box-sizing:border-box; border:1px solid #e0dad0; border-radius:3px; background:#fffefb; padding:11px 8px; font-family:'IBM Plex Mono',monospace; font-size:15px; text-align:right; color:#1b1917">
+          </label>
+          <button onClick="{{ ing.onAbrir }}" title="Editar compostos" style="background:#faf7f1; border:1px solid #e6e0d6; border-radius:3px; color:#8a6413; cursor:pointer; font-size:15px; width:44px; height:44px">›</button>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <div style="width:100%; max-width:1180px; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr)); gap:clamp(16px,2vw,24px); align-items:start">
+
+    <section style="background:#fffefb; border:1px solid #ddd6cb; border-radius:4px; overflow:hidden">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:14px; border-bottom:1px solid #e6e0d6">
+        <div style="display:flex; align-items:baseline; gap:8px">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#a97c1e">02</span>
+          <h2 style="margin:0; font-size:16px; font-weight:600">Mistura</h2>
+        </div>
+        <div style="display:flex; border:1px solid #cdc5b8; border-radius:3px; overflow:hidden">
+          <button onClick="{{ modoPct }}" style="{{ estiloBtnPct }}">%</button>
+          <button onClick="{{ modoKg }}" style="{{ estiloBtnKg }}">kg</button>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:14px; padding:12px 14px; border-bottom:1px solid #e6e0d6; background:#faf7f1">
+        <label style="display:flex; flex-direction:column; gap:5px; font-size:12px; color:#5d574f; flex:1 1 130px">
+          <span>Misturador (kg)</span>
+          <input value="{{ batch }}" onChange="{{ onBatch }}" inputMode="decimal" style="width:100%; box-sizing:border-box; border:1px solid #cdc5b8; border-radius:3px; background:#fffefb; padding:11px 10px; font-family:'IBM Plex Mono',monospace; font-size:15px; text-align:right">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:5px; font-size:12px; color:#5d574f; flex:1 1 110px">
+          <span>Saco (kg)</span>
+          <input value="{{ saco }}" onChange="{{ onSaco }}" inputMode="decimal" style="width:100%; box-sizing:border-box; border:1px solid #cdc5b8; border-radius:3px; background:#fffefb; padding:11px 10px; font-family:'IBM Plex Mono',monospace; font-size:15px; text-align:right">
+        </label>
+      </div>
+
+      <div style="display:flex; flex-direction:column">
+        <sc-for list="{{ linhas }}" as="l" hint-placeholder-count="5">
+          <div style="display:grid; grid-template-columns:1fr auto; gap:8px 10px; align-items:center; padding:12px 14px; border-bottom:1px solid #efeae1">
+            <select value="{{ l.ingredienteId }}" onChange="{{ l.onSelect }}" style="width:100%; box-sizing:border-box; border:1px solid #e0dad0; border-radius:3px; background:#fffefb; padding:10px 8px; font-size:15px; font-weight:500; min-height:44px">
+              <sc-for list="{{ l.opcoes }}" as="o" hint-placeholder-count="3">
+                <option value="{{ o.id }}">{{ o.nome }}</option>
+              </sc-for>
+            </select>
+            <button onClick="{{ l.onRemove }}" title="Remover linha" style="background:none; border:1px solid #e6e0d6; border-radius:3px; color:#b6ada2; cursor:pointer; font-size:17px; line-height:1; width:44px; height:44px">×</button>
+            <div style="grid-column:1 / -1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px">
+              <label style="display:flex; flex-direction:column; gap:3px; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#8b847b">
+                <span>%</span>
+                <input value="{{ l.pct }}" onChange="{{ l.onPct }}" readOnly="{{ l.pctBloqueado }}" inputMode="decimal" style="{{ l.estiloPct }}">
+              </label>
+              <label style="display:flex; flex-direction:column; gap:3px; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#8b847b">
+                <span>kg</span>
+                <input value="{{ l.kg }}" onChange="{{ l.onKg }}" readOnly="{{ l.kgBloqueado }}" inputMode="decimal" style="{{ l.estiloKg }}">
+              </label>
+              <label style="display:flex; flex-direction:column; gap:3px; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#8b847b">
+                <span>Custo</span>
+                <span style="padding:11px 10px; border:1px solid #f0ebe2; border-radius:3px; background:#faf7f1; font-family:'IBM Plex Mono',monospace; font-size:14px; text-align:right; color:#5d574f; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ l.custo }}</span>
+              </label>
+            </div>
+          </div>
+        </sc-for>
+
+        <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:12px 14px; background:#f0ebe2; border-bottom:1px solid #ddd6cb">
+          <div style="display:flex; flex-direction:column; gap:2px">
+            <span style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#7b746b">Total %</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; color:{{ corTotalPct }}">{{ totalPct }}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px">
+            <span style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#7b746b">Total kg</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600">{{ totalKg }}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px; min-width:0">
+            <span style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#7b746b">Custo total</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ custoTotal }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px">
+        <button onClick="{{ addLinha }}" style="background:#fffefb; color:#1b1917; border:1px solid #cdc5b8; border-radius:3px; padding:11px 14px; font-size:14px; min-height:44px; cursor:pointer">+ Ingrediente na mistura</button>
+        <span style="font-size:12px; line-height:1.45; color:#8b847b; flex:1 1 180px; text-wrap:pretty">{{ aviso }}</span>
+      </div>
+    </section>
+
+    <section style="background:#1b1917; color:#f7f4ee; border-radius:4px; overflow:hidden">
+      <div style="padding:14px; border-bottom:1px solid #35302a; display:flex; align-items:baseline; gap:8px">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#d5a83f">03</span>
+        <h2 style="margin:0; font-size:16px; font-weight:600; letter-spacing:0.01em">Produto final</h2>
+      </div>
+      <div style="padding:14px; border-bottom:1px solid #35302a; display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px">
+        <div style="display:flex; flex-direction:column; gap:3px">
+          <span style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9c948a">Custo por kg</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:20px; color:#f0d79a">{{ custoKg }}</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px">
+          <span style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9c948a">Custo por saco</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:20px; color:#f0d79a">{{ custoSaco }}</span>
+        </div>
+      </div>
+      <div style="padding:10px 14px 4px">
+        <span style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#9c948a">Níveis de garantia / kg</span>
+      </div>
+      <div style="display:flex; flex-direction:column">
+        <sc-for list="{{ resultado }}" as="r" hint-placeholder-count="10">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:10px 14px; border-bottom:1px solid #2a2622">
+            <span style="font-size:14px; color:#e4ddd2">{{ r.label }} <span style="color:#9c948a">{{ r.unit }}</span></span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:#fffefb">{{ r.valor }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:14px; display:flex; gap:8px; flex-wrap:wrap">
+        <button onClick="{{ imprimir }}" style="background:#d5a83f; color:#1b1917; border:none; border-radius:3px; padding:12px 16px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer">Imprimir / PDF</button>
+        <button onClick="{{ limpar }}" style="background:transparent; color:#9c948a; border:1px solid #45403a; border-radius:3px; padding:12px 16px; font-size:14px; min-height:44px; cursor:pointer">Limpar mistura</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<sc-if value="{{ drawerAberto }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; justify-content:flex-end">
+    <div onClick="{{ fecharDrawer }}" style="position:absolute; inset:0; background:rgba(27,25,23,0.55); animation:fade-in 160ms ease-out"></div>
+    <div style="position:relative; background:#fffefb; border-top-left-radius:14px; border-top-right-radius:14px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 -12px 40px rgba(27,25,23,0.25); animation:drawer-up 220ms cubic-bezier(0.22,0.9,0.3,1); margin:0 auto; width:100%; max-width:560px">
+      <div style="display:flex; justify-content:center; padding:8px 0 2px"><span style="width:44px; height:4px; border-radius:2px; background:#ddd6cb"></span></div>
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 16px 12px; border-bottom:1px solid #e6e0d6">
+        <div style="display:flex; flex-direction:column; gap:4px; flex:1 1 auto; min-width:0">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#8a6413">Compostos do produto</span>
+          <input value="{{ drawerNome }}" onChange="{{ onDrawerNome }}" placeholder="Nome do produto" style="width:100%; box-sizing:border-box; border:1px solid #e0dad0; border-radius:3px; background:#fffefb; padding:10px; font-size:16px; font-weight:600">
+        </div>
+        <button onClick="{{ fecharDrawer }}" title="Fechar" style="background:#faf7f1; border:1px solid #e6e0d6; border-radius:3px; color:#5d574f; cursor:pointer; font-size:18px; width:44px; height:44px; flex:0 0 auto">×</button>
+      </div>
+
+      <div style="overflow-y:auto; -webkit-overflow-scrolling:touch; flex:1 1 auto">
+        <div style="display:grid; grid-template-columns:1fr 128px; align-items:center; gap:10px; padding:10px 16px; background:#f0ebe2; border-bottom:1px solid #ddd6cb; position:sticky; top:0; z-index:1">
+          <span style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#7b746b">Composto</span>
+          <span style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#7b746b; text-align:right">Valor / kg</span>
+        </div>
+        <sc-for list="{{ drawerCelulas }}" as="c" hint-placeholder-count="10">
+          <div style="display:grid; grid-template-columns:1fr 128px; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid #efeae1">
+            <span style="display:flex; align-items:center; gap:6px; min-width:0">
+              <span style="font-size:15px">{{ c.label }} <span style="color:#8b847b">{{ c.unit }}</span></span>
+              <button onClick="{{ c.onRemoveNutriente }}" title="Remover composto" style="background:none; border:none; color:#c4bbb0; cursor:pointer; font-size:15px; line-height:1; padding:6px">×</button>
+            </span>
+            <input value="{{ c.valor }}" onChange="{{ c.onChange }}" inputMode="decimal" placeholder="—" style="width:100%; box-sizing:border-box; border:1px solid #e0dad0; border-radius:3px; background:#fffefb; padding:11px 10px; font-family:'IBM Plex Mono',monospace; font-size:15px; text-align:right">
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid #e6e0d6; background:#fffefb">
+        <button onClick="{{ addNutriente }}" style="background:#fffefb; color:#1b1917; border:1px solid #cdc5b8; border-radius:3px; padding:12px 14px; font-size:14px; min-height:44px; cursor:pointer">+ Composto</button>
+        <button onClick="{{ removerProduto }}" style="background:#fffefb; color:#b4451f; border:1px solid #e8d3cb; border-radius:3px; padding:12px 14px; font-size:14px; min-height:44px; cursor:pointer">Excluir produto</button>
+        <button onClick="{{ fecharDrawer }}" style="flex:1 1 120px; background:#1b1917; color:#f7f4ee; border:none; border-radius:3px; padding:12px 16px; font-size:15px; font-weight:600; min-height:44px; cursor:pointer">Concluir</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ confirmAberto }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:16px">
+    <div onClick="{{ confirmCancelar }}" style="position:absolute; inset:0; background:rgba(27,25,23,0.55); animation:fade-in 160ms ease-out"></div>
+    <div style="position:relative; background:#fffefb; border-radius:8px; max-width:360px; width:100%; box-shadow:0 12px 40px rgba(27,25,23,0.25); padding:20px; display:flex; flex-direction:column; gap:16px; animation:fade-in 160ms ease-out">
+      <span style="font-size:15px; line-height:1.5; color:#1b1917">{{ confirmMensagem }}</span>
+      <div style="display:flex; justify-content:flex-end; gap:8px">
+        <button onClick="{{ confirmCancelar }}" style="background:#fffefb; color:#5d574f; border:1px solid #cdc5b8; border-radius:3px; padding:10px 16px; font-size:14px; min-height:44px; cursor:pointer">Cancelar</button>
+        <button onClick="{{ confirmOk }}" style="background:#b4451f; color:#fffefb; border:none; border-radius:3px; padding:10px 16px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer">Remover</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ novoCompostoAberto }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:16px">
+    <div onClick="{{ novoCompostoCancelar }}" style="position:absolute; inset:0; background:rgba(27,25,23,0.55); animation:fade-in 160ms ease-out"></div>
+    <div style="position:relative; background:#fffefb; border-radius:8px; max-width:360px; width:100%; box-shadow:0 12px 40px rgba(27,25,23,0.25); padding:20px; display:flex; flex-direction:column; gap:14px; animation:fade-in 160ms ease-out">
+      <span style="font-size:15px; font-weight:600; color:#1b1917">Novo composto</span>
+      <label style="display:flex; flex-direction:column; gap:5px; font-size:12px; color:#5d574f">
+        <span>Nome</span>
+        <input value="{{ novoCompostoNome }}" onChange="{{ onNovoCompostoNome }}" placeholder="ex: Vitamina A" style="width:100%; box-sizing:border-box; border:1px solid #cdc5b8; border-radius:3px; background:#fffefb; padding:11px 10px; font-size:15px">
+      </label>
+      <label style="display:flex; flex-direction:column; gap:5px; font-size:12px; color:#5d574f">
+        <span>Unidade</span>
+        <select value="{{ novoCompostoUnidade }}" onChange="{{ onNovoCompostoUnidade }}" style="width:100%; box-sizing:border-box; border:1px solid #cdc5b8; border-radius:3px; background:#fffefb; padding:11px 10px; font-size:15px">
+          <option value="%">%</option>
+          <option value="g">g</option>
+          <option value="mg">mg</option>
+        </select>
+      </label>
+      <div style="display:flex; justify-content:flex-end; gap:8px">
+        <button onClick="{{ novoCompostoCancelar }}" style="background:#fffefb; color:#5d574f; border:1px solid #cdc5b8; border-radius:3px; padding:10px 16px; font-size:14px; min-height:44px; cursor:pointer">Cancelar</button>
+        <button onClick="{{ novoCompostoConfirmar }}" style="background:#1b1917; color:#f7f4ee; border:none; border-radius:3px; padding:10px 16px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer">Adicionar</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;titulo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Calculadora de tabela nutricional&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    nutrientes: [],
+    ingredientes: [],
+    linhas: [],
+    modo: 'pct',
+    batch: '1000',
+    saco: '30',
+    seq: 0,
+    aberto: null,
+    carregando: true,
+    statusSupabase: '',
+    confirmacao: null,
+    novoComposto: null
+  };
+
+  componentDidMount() {
+    this.carregarFormulacoes();
+  }
+
+  carregarFormulacoes() {
+    var self = this;
+    if (!window.SupabaseAPI) {
+      this.setState({ carregando:false, statusSupabase:'Módulo Supabase não encontrado (supabase.js).' });
+      return;
+    }
+    window.SupabaseAPI.listarFormulacoes().then(function(linhasBanco){
+      var nutrientesMap = {};
+      (linhasBanco || []).forEach(function(row){
+        var info = row.info_nutricional || {};
+        Object.keys(info).forEach(function(k){
+          if (!nutrientesMap[k]) {
+            var medida = (info[k] && info[k].medida) || 'g';
+            nutrientesMap[k] = { id:k, label:k, unit:medida, dec: medida === 'mg' ? 0 : 1 };
+          }
+        });
+      });
+      var ingredientes = (linhasBanco || []).map(function(row){
+        var info = row.info_nutricional || {};
+        var valores = {};
+        Object.keys(info).forEach(function(k){
+          var q = info[k] && info[k].quantidade;
+          valores[k] = (q === null || q === undefined) ? '' : String(q);
+        });
+        return {
+          id: String(row.id),
+          nome: row.nome || '',
+          preco: (row.real_kg === null || row.real_kg === undefined) ? '' : String(row.real_kg),
+          valores: valores
+        };
+      });
+      self.setState({
+        nutrientes: Object.keys(nutrientesMap).map(function(k){ return nutrientesMap[k]; }),
+        ingredientes: ingredientes,
+        carregando: false,
+        statusSupabase: ''
+      });
+    }).catch(function(e){
+      self.setState({ carregando:false, statusSupabase:'Erro ao carregar do Supabase: ' + e.message });
+    });
+  }
+
+  buildInfoNutricional(nutrientes, valores) {
+    var self = this;
+    var out = {};
+    nutrientes.forEach(function(n){
+      var v = valores[n.id];
+      if (v === undefined || v === '') return;
+      out[n.id] = { medida: n.unit, quantidade: self.num(v) };
+    });
+    return out;
+  }
+
+  persistIngrediente(id, campos) {
+    var self = this;
+    window.SupabaseAPI.atualizarFormulacao(id, campos).catch(function(e){
+      self.setState({ statusSupabase: 'Erro ao salvar: ' + e.message });
+    });
+  }
+
+  num(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    var x = parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
+    return isFinite(x) ? x : 0;
+  }
+  fmt(v, dec) {
+    if (!isFinite(v)) v = 0;
+    return v.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+  brl(v) { return 'R$ ' + this.fmt(v, 2); }
+
+  patch(lista, id, campo, valor) {
+    return this.state[lista].map(function(o){
+      if (o.id !== id) return o;
+      var c = Object.assign({}, o); c[campo] = valor; return c;
+    });
+  }
+
+  setValor(ingId, nutId, valor) {
+    var novosIngredientes = this.state.ingredientes.map(function(o){
+      if (o.id !== ingId) return o;
+      var vals = Object.assign({}, o.valores); vals[nutId] = valor;
+      return Object.assign({}, o, { valores: vals });
+    });
+    var ingAtualizado = novosIngredientes.filter(function(o){ return o.id === ingId; })[0];
+    this.setState({ ingredientes: novosIngredientes });
+    if (ingAtualizado) {
+      this.persistIngrediente(ingId, { info_nutricional: this.buildInfoNutricional(this.state.nutrientes, ingAtualizado.valores) });
+    }
+  }
+
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var pctMode = st.modo === 'pct';
+    var batch = this.num(st.batch);
+    var saco = this.num(st.saco);
+
+    var somaPct = 0, somaKg = 0;
+    st.linhas.forEach(function(l){ somaPct += self.num(l.pct); somaKg += self.num(l.kg); });
+    var base = pctMode ? somaPct : somaKg;
+    var totalKgReal = pctMode ? batch : somaKg;
+
+    var byId = {};
+    st.ingredientes.forEach(function(i){ byId[i.id] = i; });
+
+    var inputBase = 'width:100%; box-sizing:border-box; border:1px solid #e0dad0; border-radius:3px; padding:11px 10px; font-family:IBM Plex Mono,monospace; font-size:14px; text-align:right;';
+
+    var linhas = st.linhas.map(function(l){
+      var p = self.num(l.pct), k = self.num(l.kg);
+      var frac = base > 0 ? (pctMode ? p : k) / base : 0;
+      var kgLinha = pctMode ? frac * batch : k;
+      var ing = byId[l.ingredienteId] || { preco: '' };
+      return {
+        id: l.id,
+        ingredienteId: l.ingredienteId,
+        opcoes: st.ingredientes.map(function(i){ return { id: i.id, nome: i.nome || '(sem nome)' }; }),
+        pct: pctMode ? l.pct : (base > 0 ? self.fmt(frac * 100, 1) : '0,0'),
+        kg: pctMode ? self.fmt(kgLinha, kgLinha >= 100 ? 0 : 1) : l.kg,
+        pctBloqueado: !pctMode,
+        kgBloqueado: pctMode,
+        estiloPct: inputBase + (pctMode ? 'background:#fffefb; color:#1b1917;' : 'background:#f6f3ed; color:#7b746b;'),
+        estiloKg: inputBase + (!pctMode ? 'background:#fffefb; color:#1b1917;' : 'background:#f6f3ed; color:#7b746b;'),
+        custo: self.num(ing.preco) > 0 ? self.brl(self.num(ing.preco) * kgLinha) : '—',
+        onSelect: function(e){ self.setState({ linhas: self.patch('linhas', l.id, 'ingredienteId', e.target.value) }); },
+        onPct: function(e){ self.setState({ linhas: self.patch('linhas', l.id, 'pct', e.target.value) }); },
+        onKg: function(e){ self.setState({ linhas: self.patch('linhas', l.id, 'kg', e.target.value) }); },
+        onRemove: function(){ self.setState({ linhas: st.linhas.filter(function(x){ return x.id !== l.id; }) }); }
+      };
+    });
+
+    var resultado = st.nutrientes.map(function(n){
+      var soma = 0;
+      st.linhas.forEach(function(l){
+        var frac = base > 0 ? (pctMode ? self.num(l.pct) : self.num(l.kg)) / base : 0;
+        var ing = byId[l.ingredienteId];
+        if (ing) soma += frac * self.num(ing.valores[n.id]);
+      });
+      return { id: n.id, label: n.label, unit: n.unit, valor: self.fmt(soma, n.dec) };
+    });
+
+    var custoKg = 0;
+    st.linhas.forEach(function(l){
+      var frac = base > 0 ? (pctMode ? self.num(l.pct) : self.num(l.kg)) / base : 0;
+      var ing = byId[l.ingredienteId];
+      if (ing) custoKg += frac * self.num(ing.preco);
+    });
+
+    var ingredientes = st.ingredientes.map(function(ing){
+      var preenchidos = st.nutrientes.filter(function(n){ return self.num(ing.valores[n.id]) > 0; }).length;
+      return {
+        id: ing.id,
+        nomeVisivel: ing.nome || '(sem nome)',
+        preco: ing.preco,
+        onPreco: function(e){
+          var novoValor = e.target.value;
+          self.setState({ ingredientes: self.patch('ingredientes', ing.id, 'preco', novoValor) });
+          self.persistIngrediente(ing.id, { real_kg: self.num(novoValor) });
+        },
+        resumo: preenchidos + ' de ' + st.nutrientes.length + ' compostos informados',
+        onAbrir: function(){ self.setState({ aberto: ing.id }); }
+      };
+    });
+
+    var abertoIng = st.aberto ? byId[st.aberto] : null;
+    var drawerCelulas = abertoIng ? st.nutrientes.map(function(n){
+      return {
+        id: n.id,
+        label: n.label,
+        unit: n.unit,
+        valor: abertoIng.valores[n.id] === undefined ? '' : abertoIng.valores[n.id],
+        onChange: function(e){ self.setValor(abertoIng.id, n.id, e.target.value); },
+        onRemoveNutriente: function(){
+          self.setState({ confirmacao: {
+            mensagem: 'Remover o composto "' + n.label + '" de todos os produtos?',
+            onConfirmar: function(){
+              self.setState({ nutrientes: st.nutrientes.filter(function(x){ return x.id !== n.id; }) });
+            }
+          } });
+        }
+      };
+    }) : [];
+
+    var btnOn = 'border:none; padding:11px 20px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer; background:#1b1917; color:#f7f4ee;';
+    var btnOff = 'border:none; padding:11px 20px; font-size:14px; font-weight:500; min-height:44px; cursor:pointer; background:#fffefb; color:#5d574f;';
+    var pctFora = pctMode && Math.abs(somaPct - 100) > 0.05;
+
+    return {
+      titulo: this.props.titulo || 'Calculadora de tabela nutricional',
+      statusSupabase: st.carregando ? 'Carregando produtos do Supabase…' : st.statusSupabase,
+      ingredientes: ingredientes,
+      linhas: linhas,
+      resultado: resultado,
+      batch: st.batch,
+      saco: st.saco,
+      onBatch: function(e){ self.setState({ batch: e.target.value }); },
+      onSaco: function(e){ self.setState({ saco: e.target.value }); },
+      modoPct: function(){ self.setState({ modo: 'pct' }); },
+      modoKg: function(){ self.setState({ modo: 'kg' }); },
+      estiloBtnPct: pctMode ? btnOn : btnOff,
+      estiloBtnKg: pctMode ? btnOff : btnOn,
+      totalPct: this.fmt(pctMode ? somaPct : (base > 0 ? 100 : 0), 1) + '%',
+      corTotalPct: pctFora ? '#b4451f' : '#1b1917',
+      totalKg: this.fmt(totalKgReal, totalKgReal >= 100 ? 0 : 1),
+      custoTotal: custoKg > 0 ? this.brl(custoKg * totalKgReal) : '—',
+      custoKg: custoKg > 0 ? this.brl(custoKg) : '—',
+      custoSaco: custoKg > 0 ? this.brl(custoKg * saco) : '—',
+      aviso: pctFora ? 'A soma das porcentagens está em ' + this.fmt(somaPct, 1) + '% — ajuste para 100%.' : 'Os níveis são a média ponderada dos produtos da mistura.',
+
+      drawerAberto: !!abertoIng,
+      drawerNome: abertoIng ? abertoIng.nome : '',
+      drawerPreco: abertoIng ? abertoIng.preco : '',
+      drawerCelulas: drawerCelulas,
+      onDrawerNome: function(e){
+        var novoNome = e.target.value;
+        self.setState({ ingredientes: self.patch('ingredientes', st.aberto, 'nome', novoNome) });
+        self.persistIngrediente(st.aberto, { nome: novoNome });
+      },
+      fecharDrawer: function(){ self.setState({ aberto: null }); },
+      removerProduto: function(){
+        self.setState({ confirmacao: {
+          mensagem: 'Excluir este produto? Essa ação não pode ser desfeita.',
+          onConfirmar: function(){
+            var id = st.aberto;
+            window.SupabaseAPI.excluirFormulacao(id).then(function(){
+              self.setState({
+                ingredientes: st.ingredientes.filter(function(x){ return x.id !== id; }),
+                linhas: st.linhas.filter(function(l){ return l.ingredienteId !== id; }),
+                aberto: null
+              });
+            }).catch(function(e){
+              self.setState({ statusSupabase: 'Erro ao excluir: ' + e.message });
+            });
+          }
+        } });
+      },
+
+      addLinha: function(){
+        var primeiro = st.ingredientes[0];
+        self.setState({ linhas: st.linhas.concat([{ id:'l'+(st.seq+1), ingredienteId: primeiro ? primeiro.id : '', pct:'', kg:'' }]), seq: st.seq + 1 });
+      },
+      addIngrediente: function(){
+        self.setState({ statusSupabase: 'Criando produto…' });
+        window.SupabaseAPI.criarFormulacao({ nome:'', real_kg:null, info_nutricional:{} }).then(function(row){
+          var novo = { id:String(row.id), nome: row.nome || '', preco:'', valores:{} };
+          self.setState({ ingredientes: st.ingredientes.concat([novo]), aberto: novo.id, statusSupabase:'' });
+        }).catch(function(e){
+          self.setState({ statusSupabase: 'Erro ao criar produto: ' + e.message });
+        });
+      },
+      addNutriente: function(){
+        self.setState({ novoComposto: { nome:'', unidade:'g' } });
+      },
+      imprimir: function(){ window.print(); },
+      limpar: function(){
+        if (!window.confirm('Limpar a mistura atual? Os produtos cadastrados no Supabase não serão afetados.')) return;
+        self.setState({ linhas: [], modo:'pct', batch:'1000', saco:'30' });
+      },
+
+      confirmAberto: !!st.confirmacao,
+      confirmMensagem: st.confirmacao ? st.confirmacao.mensagem : '',
+      confirmCancelar: function(){ self.setState({ confirmacao: null }); },
+      confirmOk: function(){
+        var acao = st.confirmacao && st.confirmacao.onConfirmar;
+        self.setState({ confirmacao: null });
+        if (acao) acao();
+      },
+
+      novoCompostoAberto: !!st.novoComposto,
+      novoCompostoNome: st.novoComposto ? st.novoComposto.nome : '',
+      novoCompostoUnidade: st.novoComposto ? st.novoComposto.unidade : 'g',
+      onNovoCompostoNome: function(e){
+        self.setState({ novoComposto: Object.assign({}, st.novoComposto, { nome: e.target.value }) });
+      },
+      onNovoCompostoUnidade: function(e){
+        self.setState({ novoComposto: Object.assign({}, st.novoComposto, { unidade: e.target.value }) });
+      },
+      novoCompostoCancelar: function(){ self.setState({ novoComposto: null }); },
+      novoCompostoConfirmar: function(){
+        var nc = st.novoComposto;
+        if (!nc || !nc.nome || !nc.nome.trim()) return;
+        var nome = nc.nome.trim();
+        var un = nc.unidade || 'g';
+        self.setState({
+          nutrientes: st.nutrientes.concat([{ id:nome, label:nome, unit:un, dec: un === 'mg' ? 0 : 1 }]),
+          novoComposto: null
+        });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
