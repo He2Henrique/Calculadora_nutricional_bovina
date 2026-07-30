@@ -372,7 +372,7 @@ class Component extends DCLogic {
 
     var somaPct = 0, somaKg = 0;
     st.linhas.forEach(function(l){ somaPct += self.num(l.pct); somaKg += self.num(l.kg); });
-    var base = pctMode ? somaPct : somaKg;
+    var base = pctMode ? 100 : somaKg;
     var totalKgReal = pctMode ? batch : somaKg;
 
     var byId = {};
