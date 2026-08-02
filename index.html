@@ -67,17 +67,36 @@
     </div>
   </section>
 
+  <section style="width:100%; max-width:1180px; background:#fffefb; border:1px solid #ddd6cb; border-radius:4px">
+    <div style="display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; padding:14px; border-bottom:1px solid #e6e0d6">
+      <h2 style="margin:0; font-size:16px; font-weight:600">Misturas salvas</h2>
+      <span style="font-size:12px; color:#8b847b; flex-basis:100%">toque no nome para carregar a mistura na seção 02</span>
+    </div>
+    <div style="display:flex; flex-direction:column">
+      <sc-for list="{{ misturas }}" as="m" hint-placeholder-count="2">
+        <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid #efeae1">
+          <button onClick="{{ m.onCarregar }}" style="display:flex; align-items:center; gap:3px; background:none; border:none; padding:4px 0; text-align:left; cursor:pointer; min-height:44px; min-width:0; font-size:15px; font-weight:600; color:#1b1917">{{ m.nome }}</button>
+          <button onClick="{{ m.onExcluir }}" title="Excluir mistura" style="background:none; border:1px solid #e6e0d6; border-radius:3px; color:#b6ada2; cursor:pointer; font-size:17px; line-height:1; width:44px; height:44px">×</button>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
   <div class="print-area" style="width:100%; max-width:1180px; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr)); gap:clamp(16px,2vw,24px); align-items:start">
 
     <section style="background:#fffefb; border:1px solid #ddd6cb; border-radius:4px; overflow:hidden">
       <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:14px; border-bottom:1px solid #e6e0d6">
-        <div style="display:flex; align-items:baseline; gap:8px">
+        <div style="display:flex; flex-wrap:wrap; align-items:baseline; gap:8px">
           <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#a97c1e">02</span>
           <h2 style="margin:0; font-size:16px; font-weight:600">Mistura</h2>
+          <span style="font-size:12px; color:#8b847b">{{ misturaAtualNome }}</span>
         </div>
-        <div style="display:flex; border:1px solid #cdc5b8; border-radius:3px; overflow:hidden">
-          <button onClick="{{ modoPct }}" style="{{ estiloBtnPct }}">%</button>
-          <button onClick="{{ modoKg }}" style="{{ estiloBtnKg }}">kg</button>
+        <div style="display:flex; align-items:center; gap:8px">
+          <button onClick="{{ salvarMisturaAbrir }}" style="background:#fffefb; color:#1b1917; border:1px solid #cdc5b8; border-radius:3px; padding:9px 12px; font-size:13px; font-weight:500; min-height:44px; cursor:pointer">Salvar mistura</button>
+          <div style="display:flex; border:1px solid #cdc5b8; border-radius:3px; overflow:hidden">
+            <button onClick="{{ modoPct }}" style="{{ estiloBtnPct }}">%</button>
+            <button onClick="{{ modoKg }}" style="{{ estiloBtnKg }}">kg</button>
+          </div>
         </div>
       </div>
 
@@ -250,6 +269,23 @@
   </div>
 </sc-if>
 
+<sc-if value="{{ salvarMisturaAberto }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:16px">
+    <div onClick="{{ salvarMisturaCancelar }}" style="position:absolute; inset:0; background:rgba(27,25,23,0.55); animation:fade-in 160ms ease-out"></div>
+    <div style="position:relative; background:#fffefb; border-radius:8px; max-width:360px; width:100%; box-shadow:0 12px 40px rgba(27,25,23,0.25); padding:20px; display:flex; flex-direction:column; gap:14px; animation:fade-in 160ms ease-out">
+      <span style="font-size:15px; font-weight:600; color:#1b1917">Salvar mistura</span>
+      <label style="display:flex; flex-direction:column; gap:5px; font-size:12px; color:#5d574f">
+        <span>Nome da mistura</span>
+        <input value="{{ salvarMisturaNome }}" onChange="{{ onSalvarMisturaNome }}" placeholder="ex: Ração de engorda" style="width:100%; box-sizing:border-box; border:1px solid #cdc5b8; border-radius:3px; background:#fffefb; padding:11px 10px; font-size:15px">
+      </label>
+      <div style="display:flex; justify-content:flex-end; gap:8px">
+        <button onClick="{{ salvarMisturaCancelar }}" style="background:#fffefb; color:#5d574f; border:1px solid #cdc5b8; border-radius:3px; padding:10px 16px; font-size:14px; min-height:44px; cursor:pointer">Cancelar</button>
+        <button onClick="{{ salvarMisturaConfirmar }}" style="background:#1b1917; color:#f7f4ee; border:none; border-radius:3px; padding:10px 16px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer">Salvar</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;titulo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Calculadora de tabela nutricional&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
@@ -265,11 +301,35 @@ class Component extends DCLogic {
     carregando: true,
     statusSupabase: '',
     confirmacao: null,
-    novoComposto: null
+    novoComposto: null,
+    misturas: [],
+    misturaAtualId: null,
+    misturaAtualNome: '',
+    salvarMisturaAberto: null
   };
 
   componentDidMount() {
     this.carregarFormulacoes();
+    this.carregarMisturas();
+  }
+
+  carregarMisturas() {
+    var self = this;
+    if (!window.SupabaseAPI) return;
+    window.SupabaseAPI.listarMisturas().then(function(rows){
+      self.setState({ misturas: (rows || []).map(function(row){
+        return {
+          id: row.id,
+          nome: row.nome || '(sem nome)',
+          modo: row.modo,
+          batch_kg: row.batch_kg,
+          saco_kg: row.saco_kg,
+          itens: row.mistura_itens || []
+        };
+      }) });
+    }).catch(function(e){
+      self.setState({ statusSupabase: 'Erro ao carregar misturas: ' + e.message });
+    });
   }
 
   carregarFormulacoes() {
@@ -528,7 +588,7 @@ class Component extends DCLogic {
       imprimir: function(){ window.print(); },
       limpar: function(){
         if (!window.confirm('Limpar a mistura atual? Os produtos cadastrados no Supabase não serão afetados.')) return;
-        self.setState({ linhas: [], modo:'pct', batch:'1000', saco:'30' });
+        self.setState({ linhas: [], modo:'pct', batch:'1000', saco:'30', misturaAtualId: null, misturaAtualNome: '' });
       },
 
       confirmAberto: !!st.confirmacao,
@@ -558,6 +618,79 @@ class Component extends DCLogic {
         self.setState({
           nutrientes: st.nutrientes.concat([{ id:nome, label:nome, unit:un, dec: un === 'mg' ? 0 : 1 }]),
           novoComposto: null
+        });
+      },
+
+      misturaAtualNome: st.misturaAtualNome || '',
+      misturas: st.misturas.map(function(m){
+        return {
+          id: m.id,
+          nome: m.nome,
+          onCarregar: function(){
+            self.setState({
+              linhas: m.itens.map(function(it, idx){
+                return {
+                  id: 'l'+idx,
+                  ingredienteId: it.id_formulacao === null || it.id_formulacao === undefined ? '' : String(it.id_formulacao),
+                  pct: it.pct === null || it.pct === undefined ? '' : String(it.pct),
+                  kg: it.kg === null || it.kg === undefined ? '' : String(it.kg)
+                };
+              }),
+              modo: m.modo || 'pct',
+              batch: m.batch_kg === null || m.batch_kg === undefined ? '1000' : String(m.batch_kg),
+              saco: m.saco_kg === null || m.saco_kg === undefined ? '30' : String(m.saco_kg),
+              misturaAtualId: m.id,
+              misturaAtualNome: m.nome
+            });
+          },
+          onExcluir: function(){
+            self.setState({ confirmacao: {
+              mensagem: 'Excluir a mistura "' + m.nome + '"?',
+              onConfirmar: function(){
+                window.SupabaseAPI.excluirMistura(m.id).then(function(){
+                  self.setState({
+                    misturas: st.misturas.filter(function(x){ return x.id !== m.id; }),
+                    misturaAtualId: st.misturaAtualId === m.id ? null : st.misturaAtualId,
+                    misturaAtualNome: st.misturaAtualId === m.id ? '' : st.misturaAtualNome
+                  });
+                }).catch(function(e){
+                  self.setState({ statusSupabase: 'Erro ao excluir mistura: ' + e.message });
+                });
+              }
+            } });
+          }
+        };
+      }),
+
+      salvarMisturaAbrir: function(){
+        self.setState({ salvarMisturaAberto: { nome: st.misturaAtualNome || '' } });
+      },
+      salvarMisturaAberto: !!st.salvarMisturaAberto,
+      salvarMisturaNome: st.salvarMisturaAberto ? st.salvarMisturaAberto.nome : '',
+      onSalvarMisturaNome: function(e){
+        self.setState({ salvarMisturaAberto: Object.assign({}, st.salvarMisturaAberto, { nome: e.target.value }) });
+      },
+      salvarMisturaCancelar: function(){ self.setState({ salvarMisturaAberto: null }); },
+      salvarMisturaConfirmar: function(){
+        var dados = st.salvarMisturaAberto;
+        var nome = dados && dados.nome ? dados.nome.trim() : '';
+        if (!nome) return;
+        var payloadMistura = { nome: nome, modo: st.modo, batch_kg: Math.round(self.num(st.batch)), saco_kg: Math.round(self.num(st.saco)) };
+        var itens = st.linhas.filter(function(l){ return l.ingredienteId; }).map(function(l){
+          return { id_formulacao: l.ingredienteId, pct: Math.round(self.num(l.pct)), kg: Math.round(self.num(l.kg)) };
+        });
+        self.setState({ salvarMisturaAberto: null, statusSupabase: 'Salvando mistura…' });
+        var promessa = st.misturaAtualId
+          ? window.SupabaseAPI.atualizarMistura(st.misturaAtualId, payloadMistura)
+          : window.SupabaseAPI.criarMistura(payloadMistura);
+        promessa.then(function(row){
+          var id = st.misturaAtualId || (row && row.id);
+          return window.SupabaseAPI.salvarItensDaMistura(id, itens).then(function(){ return id; });
+        }).then(function(id){
+          self.setState({ misturaAtualId: id, misturaAtualNome: nome, statusSupabase: '' });
+          self.carregarMisturas();
+        }).catch(function(e){
+          self.setState({ statusSupabase: 'Erro ao salvar mistura: ' + e.message });
         });
       }
     };
