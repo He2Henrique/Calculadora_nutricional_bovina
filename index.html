@@ -68,9 +68,12 @@
   </section>
 
   <section style="width:100%; max-width:1180px; background:#fffefb; border:1px solid #ddd6cb; border-radius:4px">
-    <div style="display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; padding:14px; border-bottom:1px solid #e6e0d6">
-      <h2 style="margin:0; font-size:16px; font-weight:600">Misturas salvas</h2>
-      <span style="font-size:12px; color:#8b847b; flex-basis:100%">toque no nome para carregar a mistura na seção 02</span>
+    <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:14px; border-bottom:1px solid #e6e0d6">
+      <div style="display:flex; flex-wrap:wrap; align-items:baseline; gap:8px">
+        <h2 style="margin:0; font-size:16px; font-weight:600">Misturas salvas</h2>
+        <span style="font-size:12px; color:#8b847b; flex-basis:100%">toque no nome para carregar a mistura na seção 02</span>
+      </div>
+      <button onClick="{{ novaMistura }}" style="background:#1b1917; color:#f7f4ee; border:1px solid #1b1917; border-radius:3px; padding:10px 14px; font-size:13px; font-weight:500; min-height:44px; cursor:pointer">+ Nova mistura</button>
     </div>
     <div style="display:flex; flex-direction:column">
       <sc-for list="{{ misturas }}" as="m" hint-placeholder-count="2">
@@ -187,7 +190,6 @@
       </div>
       <div style="padding:14px; display:flex; gap:8px; flex-wrap:wrap">
         <button onClick="{{ imprimir }}" style="background:#d5a83f; color:#1b1917; border:none; border-radius:3px; padding:12px 16px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer">Imprimir / PDF</button>
-        <button onClick="{{ limpar }}" style="background:transparent; color:#9c948a; border:1px solid #45403a; border-radius:3px; padding:12px 16px; font-size:14px; min-height:44px; cursor:pointer">Limpar mistura</button>
       </div>
     </section>
   </div>
@@ -238,7 +240,7 @@
       <span style="font-size:15px; line-height:1.5; color:#1b1917">{{ confirmMensagem }}</span>
       <div style="display:flex; justify-content:flex-end; gap:8px">
         <button onClick="{{ confirmCancelar }}" style="background:#fffefb; color:#5d574f; border:1px solid #cdc5b8; border-radius:3px; padding:10px 16px; font-size:14px; min-height:44px; cursor:pointer">Cancelar</button>
-        <button onClick="{{ confirmOk }}" style="background:#b4451f; color:#fffefb; border:none; border-radius:3px; padding:10px 16px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer">Remover</button>
+        <button onClick="{{ confirmOk }}" style="background:#b4451f; color:#fffefb; border:none; border-radius:3px; padding:10px 16px; font-size:14px; font-weight:600; min-height:44px; cursor:pointer">{{ confirmRotulo }}</button>
       </div>
     </div>
   </div>
@@ -586,13 +588,22 @@ class Component extends DCLogic {
         self.setState({ novoComposto: { nome:'', unidade:'g' } });
       },
       imprimir: function(){ window.print(); },
-      limpar: function(){
-        if (!window.confirm('Limpar a mistura atual? Os produtos cadastrados no Supabase não serão afetados.')) return;
-        self.setState({ linhas: [], modo:'pct', batch:'1000', saco:'30', misturaAtualId: null, misturaAtualNome: '' });
+      novaMistura: function(){
+        var iniciar = function(){
+          self.setState({ linhas: [], modo:'pct', batch:'1000', saco:'30', misturaAtualId: null, misturaAtualNome: '' });
+          self.flash('Nova mistura iniciada.');
+        };
+        if (!st.linhas.length && !st.misturaAtualId) { iniciar(); return; }
+        self.setState({ confirmacao: {
+          mensagem: 'Iniciar uma nova mistura? As linhas atuais não salvas serão perdidas.',
+          rotulo: 'Continuar',
+          onConfirmar: iniciar
+        } });
       },
 
       confirmAberto: !!st.confirmacao,
       confirmMensagem: st.confirmacao ? st.confirmacao.mensagem : '',
+      confirmRotulo: st.confirmacao && st.confirmacao.rotulo ? st.confirmacao.rotulo : 'Remover',
       confirmCancelar: function(){ self.setState({ confirmacao: null }); },
       confirmOk: function(){
         var acao = st.confirmacao && st.confirmacao.onConfirmar;
