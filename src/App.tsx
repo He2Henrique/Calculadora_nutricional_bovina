@@ -13,6 +13,12 @@ import { Api } from './lib/api';
 import type { Medida, ModoApi } from './lib/api';
 import { brl, fmt, num } from './lib/format';
 import { updateById } from './lib/collections';
+
+// Produto ainda não salvo no backend: existe só localmente até o drawer ser fechado.
+const TEMP_ID_PREFIX = 'novo-';
+function isTemp(id: string): boolean {
+  return id.startsWith(TEMP_ID_PREFIX);
+}
 import IngredientesSection from './components/IngredientesSection';
 import MisturasSection from './components/MisturasSection';
 import MisturaSection from './components/MisturaSection';
@@ -162,7 +168,7 @@ export default function App() {
 
   function setValor(ingId: string, nutId: string, valor: string) {
     setIngredientes((prev) => prev.map((o) => (o.id === ingId ? { ...o, valores: { ...o.valores, [nutId]: valor } } : o)));
-    persistirNivel(ingId, nutId, valor);
+    if (!isTemp(ingId)) persistirNivel(ingId, nutId, valor);
   }
 
   // ---- derived values ----
@@ -219,13 +225,57 @@ export default function App() {
   }
 
   function addIngrediente() {
+    const tempId = `${TEMP_ID_PREFIX}${seq + 1}`;
+    setSeq((s) => s + 1);
+    const novo: Ingrediente = { id: tempId, nome: '', preco: '0', valores: {} };
+    setIngredientes((prev) => [...prev, novo]);
+    setAberto(tempId);
+  }
+
+  function fecharDrawer() {
+    if (!aberto || !isTemp(aberto)) {
+      setAberto(null);
+      return;
+    }
+
+    const tempId = aberto;
+    const temp = ingredientesPorId.get(tempId);
+    setAberto(null);
+
+    if (!temp || !temp.nome.trim()) {
+      setIngredientes((prev) => prev.filter((i) => i.id !== tempId));
+      return;
+    }
+
     setStatusApi('Criando produto…');
-    Api.criarFormulacao({ nome: '', real_kg: 0 })
+    Api.criarFormulacao({ nome: temp.nome.trim(), real_kg: num(temp.preco) })
       .then((row) => {
-        const novo: Ingrediente = { id: String(row.id), nome: row.nome || '', preco: '0', valores: {} };
-        setIngredientes((prev) => [...prev, novo]);
-        setAberto(novo.id);
-        setStatusApi('');
+        const novoId = String(row.id);
+        const valoresPreenchidos = Object.entries(temp.valores).filter(([, v]) => v !== '');
+        return Promise.all(
+          valoresPreenchidos.map(([nutId, valor]) => {
+            const nutriente = nutrientes.find((n) => n.id === nutId);
+            const medida = (nutriente?.unit as Medida) ?? 'g';
+            const quantidade = Math.round(num(valor));
+            return Api.criarNivelGarantia({
+              id_composto: Number(nutId),
+              id_formulacao: row.id,
+              medida,
+              quantidade
+            }).then((nivel) => [nutId, nivel.id] as const);
+          })
+        ).then((paresNivel) => {
+          setIngredientes((prev) => prev.map((i) => (i.id === tempId ? { ...i, id: novoId } : i)));
+          setLinhas((prev) => prev.map((l) => (l.ingredienteId === tempId ? { ...l, ingredienteId: novoId } : l)));
+          setNiveisPorChave((prev) => {
+            const next = { ...prev };
+            paresNivel.forEach(([nutId, nivelId]) => {
+              next[`${novoId}:${nutId}`] = nivelId;
+            });
+            return next;
+          });
+          setStatusApi('');
+        });
       })
       .catch((e: Error) => setStatusApi('Erro ao criar produto: ' + e.message));
   }
@@ -233,6 +283,13 @@ export default function App() {
   function removerProduto() {
     if (!aberto) return;
     const id = aberto;
+
+    if (isTemp(id)) {
+      setIngredientes((prev) => prev.filter((x) => x.id !== id));
+      setAberto(null);
+      return;
+    }
+
     setConfirmacao({
       mensagem: 'Excluir este produto? Essa ação não pode ser desfeita.',
       onConfirmar: () => {
@@ -463,7 +520,7 @@ export default function App() {
             onAbrir={setAberto}
             onPrecoChange={(id, valor) => {
               setIngredientes((prev) => updateById(prev, id, { preco: valor }));
-              persistIngrediente(id, { real_kg: num(valor) });
+              if (!isTemp(id)) persistIngrediente(id, { real_kg: num(valor) });
             }}
           />
         </section>
@@ -520,11 +577,11 @@ export default function App() {
       <DrawerComposto
         ingrediente={abertoIng}
         nutrientes={nutrientes}
-        onClose={() => setAberto(null)}
+        onClose={fecharDrawer}
         onNomeChange={(nome) => {
           if (!aberto) return;
           setIngredientes((prev) => updateById(prev, aberto, { nome }));
-          persistIngrediente(aberto, { nome });
+          if (!isTemp(aberto)) persistIngrediente(aberto, { nome });
         }}
         onValorChange={(nutId, valor) => abertoIng && setValor(abertoIng.id, nutId, valor)}
         onAddComposto={() => setNovoComposto({ nome: '', unidade: 'g' })}
