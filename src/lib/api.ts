@@ -106,6 +106,7 @@ export const Api = {
 
   listarCompostos: () => get<Composto>('compostos', { order_by: 'nome' }),
   criarComposto: (composto: { nome: string }) => post<Composto>('compostos', composto),
+  atualizarComposto: (id: number, composto: Partial<{ nome: string }>) => patch<Composto>('compostos', id, composto),
   excluirComposto: (id: number) => del('compostos', id),
 
   async excluirCompostoComDependencias(id: number): Promise<void> {

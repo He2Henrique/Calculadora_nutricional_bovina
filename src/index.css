@@ -110,10 +110,12 @@ a:hover { color:#a97c1e; }
 .drawer-table-head span:last-child { text-align:right; }
 .drawer-cell-label { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#7b746b; }
 .composto-row { display:grid; grid-template-columns:1fr 128px; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid #efeae1; }
-.composto-name { display:flex; align-items:center; gap:6px; min-width:0; }
-.composto-name span:first-child { font-size:15px; }
-.composto-unit { color:#8b847b; }
-.composto-remove { background:none; border:none; color:#c4bbb0; cursor:pointer; font-size:15px; line-height:1; padding:6px; }
+.composto-name { display:flex; align-items:center; gap:2px; min-width:0; }
+.composto-label { font-size:15px; cursor:pointer; border-radius:4px; padding:2px 4px; margin:-2px 0 -2px -4px; }
+.composto-label:hover { background:#f1ece2; text-decoration:underline; }
+.composto-unit { color:#8b847b; cursor:pointer; border-radius:4px; padding:2px 4px; }
+.composto-unit:hover { background:#e4dcc9; color:#5c554a; text-decoration:underline; }
+.composto-remove { background:none; border:none; color:#c4bbb0; cursor:pointer; font-size:15px; line-height:1; padding:6px; margin-left:auto; }
 .composto-value-input { width:100%; box-sizing:border-box; border:1px solid #e0dad0; border-radius:3px; background:#fffefb; padding:11px 10px; font-family:'IBM Plex Mono',monospace; font-size:15px; text-align:right; }
 .drawer-footer { display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid #e6e0d6; background:#fffefb; }
 .btn-danger-outline { background:#fffefb; color:#b4451f; border:1px solid #e8d3cb; border-radius:3px; padding:12px 14px; font-size:14px; min-height:44px; cursor:pointer; }

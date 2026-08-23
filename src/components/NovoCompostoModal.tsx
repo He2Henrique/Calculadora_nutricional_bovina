@@ -21,29 +21,38 @@ export default function NovoCompostoModal({
     return <div className={overlayClass} />;
   }
 
+  const editando = Boolean(novoComposto.id);
+  const editandoUnidade = editando && novoComposto.campo === 'unidade';
+
+  const titulo = editandoUnidade ? 'Editar unidade' : editando ? 'Editar composto' : 'Novo composto';
+
   return (
     <div className={overlayClass}>
       <div className="overlay-backdrop" onClick={onCancelar} />
       <div className="modal modal-tight">
-        <span className="modal-title">Novo composto</span>
-        <label className="modal-field">
-          <span>Nome</span>
-          <CommitInput placeholder="ex: Vitamina A" value={novoComposto.nome} onCommit={onNomeChange} />
-        </label>
-        <label className="modal-field">
-          <span>Unidade</span>
-          <select value={novoComposto.unidade} onChange={(e) => onUnidadeChange(e.target.value)}>
-            <option value="%">%</option>
-            <option value="g">g</option>
-            <option value="mg">mg</option>
-          </select>
-        </label>
+        <span className="modal-title">{titulo}</span>
+        {!editandoUnidade && (
+          <label className="modal-field">
+            <span>Nome</span>
+            <CommitInput placeholder="ex: Vitamina A" value={novoComposto.nome} onCommit={onNomeChange} />
+          </label>
+        )}
+        {(!editando || editandoUnidade) && (
+          <label className="modal-field">
+            <span>Unidade</span>
+            <select value={novoComposto.unidade} onChange={(e) => onUnidadeChange(e.target.value)}>
+              <option value="%">%</option>
+              <option value="g">g</option>
+              <option value="mg">mg</option>
+            </select>
+          </label>
+        )}
         <div className="modal-actions">
           <button type="button" className="btn-cancel" onClick={onCancelar}>
             Cancelar
           </button>
           <button type="button" className="btn-confirm" onClick={onConfirmar}>
-            Adicionar
+            {editando ? 'Salvar' : 'Adicionar'}
           </button>
         </div>
       </div>

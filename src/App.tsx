@@ -281,9 +281,48 @@ export default function App() {
     acao?.();
   }
 
+  function editarComposto(n: Nutriente) {
+    setNovoComposto({ id: n.id, campo: 'nome', nome: n.label, unidade: n.unit });
+  }
+
+  function editarUnidadeComposto(n: Nutriente) {
+    setNovoComposto({ id: n.id, campo: 'unidade', nome: n.label, unidade: n.unit });
+  }
+
   function novoCompostoConfirmar() {
-    if (!novoComposto || !novoComposto.nome.trim()) return;
+    if (!novoComposto) return;
+
+    if (novoComposto.id && novoComposto.campo === 'unidade') {
+      const id = novoComposto.id;
+      const un = (novoComposto.unidade || 'g') as Medida;
+      setNovoComposto(null);
+      setStatusApi('Salvando unidade…');
+      Api.listarNiveisGarantia({ id_composto: Number(id) })
+        .then((niveis) => Promise.all(niveis.map((nivel) => Api.atualizarNivelGarantia(nivel.id, { medida: un }))))
+        .then(() => {
+          setNutrientes((prev) => prev.map((n) => (n.id === id ? { ...n, unit: un, dec: un === 'mg' ? 0 : 1 } : n)));
+          setStatusApi('');
+        })
+        .catch((e: Error) => setStatusApi('Erro ao salvar unidade: ' + e.message));
+      return;
+    }
+
+    if (!novoComposto.nome.trim()) return;
     const nome = novoComposto.nome.trim();
+
+    if (novoComposto.id) {
+      const id = novoComposto.id;
+      setNovoComposto(null);
+      setStatusApi('Salvando composto…');
+      Api.atualizarComposto(Number(id), { nome })
+        .then(() => {
+          setNutrientes((prev) => prev.map((n) => (n.id === id ? { ...n, label: nome } : n)));
+          setStatusApi('');
+        })
+        .catch((e: Error) => setStatusApi('Erro ao salvar composto: ' + e.message));
+      return;
+    }
+
     const un = (novoComposto.unidade || 'g') as Medida;
     setNovoComposto(null);
     setStatusApi('Criando composto…');
@@ -489,6 +528,8 @@ export default function App() {
         }}
         onValorChange={(nutId, valor) => abertoIng && setValor(abertoIng.id, nutId, valor)}
         onAddComposto={() => setNovoComposto({ nome: '', unidade: 'g' })}
+        onEditComposto={editarComposto}
+        onEditUnidade={editarUnidadeComposto}
         onRemoverProduto={removerProduto}
         onRemoveNutriente={handleRemoveNutriente}
       />
