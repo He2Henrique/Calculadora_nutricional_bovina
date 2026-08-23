@@ -1,0 +1,446 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type {
+  Confirmacao,
+  Ingrediente,
+  Linha,
+  Modo,
+  MisturaSalva,
+  Nutriente,
+  NovoComposto,
+  SalvarMisturaState
+} from './types';
+import { SupabaseAPI } from './lib/supabase';
+import type { InfoNutricionalValor, NovoItemMistura } from './lib/supabase';
+import { brl, fmt, num } from './lib/format';
+import { updateById } from './lib/collections';
+import IngredientesSection from './components/IngredientesSection';
+import MisturasSection from './components/MisturasSection';
+import MisturaSection from './components/MisturaSection';
+import ResultadoSection from './components/ResultadoSection';
+import DrawerComposto from './components/DrawerComposto';
+import ConfirmModal from './components/ConfirmModal';
+import NovoCompostoModal from './components/NovoCompostoModal';
+import SalvarMisturaModal from './components/SalvarMisturaModal';
+
+export default function App() {
+  const [nutrientes, setNutrientes] = useState<Nutriente[]>([]);
+  const [ingredientes, setIngredientes] = useState<Ingrediente[]>([]);
+  const [linhas, setLinhas] = useState<Linha[]>([]);
+  const [modo, setModo] = useState<Modo>('pct');
+  const [batch, setBatch] = useState('1000');
+  const [saco, setSaco] = useState('30');
+  const [seq, setSeq] = useState(0);
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [statusSupabase, setStatusSupabase] = useState('');
+  const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
+  const [novoComposto, setNovoComposto] = useState<NovoComposto | null>(null);
+  const [misturas, setMisturas] = useState<MisturaSalva[]>([]);
+  const [misturaAtualId, setMisturaAtualId] = useState<number | null>(null);
+  const [misturaAtualNome, setMisturaAtualNome] = useState('');
+  const [salvarMisturaAberto, setSalvarMisturaAberto] = useState<SalvarMisturaState | null>(null);
+
+  const flash = useCallback((msg: string) => {
+    setStatusSupabase(msg);
+    setTimeout(() => {
+      setStatusSupabase((atual) => (atual === msg ? '' : atual));
+    }, 2500);
+  }, []);
+
+  const carregarMisturas = useCallback(() => {
+    SupabaseAPI.listarMisturas()
+      .then((rows) => {
+        setMisturas(
+          (rows ?? []).map((row) => ({
+            id: row.id,
+            nome: row.nome || '(sem nome)',
+            modo: (row.modo as Modo) ?? null,
+            batchKg: row.batch_kg,
+            sacoKg: row.saco_kg,
+            itens: (row.mistura_itens ?? []).map((it) => ({
+              idFormulacao: it.id_formulacao,
+              pct: it.pct,
+              kg: it.kg
+            }))
+          }))
+        );
+      })
+      .catch((e: Error) => setStatusSupabase('Erro ao carregar misturas: ' + e.message));
+  }, []);
+
+  const carregarFormulacoes = useCallback(() => {
+    SupabaseAPI.listarFormulacoes()
+      .then((linhasBanco) => {
+        const nutrientesMap: Record<string, Nutriente> = {};
+        (linhasBanco ?? []).forEach((row) => {
+          const info = row.info_nutricional || {};
+          Object.keys(info).forEach((k) => {
+            if (!nutrientesMap[k]) {
+              const medida = info[k]?.medida || 'g';
+              nutrientesMap[k] = { id: k, label: k, unit: medida, dec: medida === 'mg' ? 0 : 1 };
+            }
+          });
+        });
+        const novosIngredientes: Ingrediente[] = (linhasBanco ?? []).map((row) => {
+          const info = row.info_nutricional || {};
+          const valores: Record<string, string> = {};
+          Object.keys(info).forEach((k) => {
+            const q = info[k]?.quantidade;
+            valores[k] = q === null || q === undefined ? '' : String(q);
+          });
+          return {
+            id: String(row.id),
+            nome: row.nome || '',
+            preco: row.real_kg === null || row.real_kg === undefined ? '' : String(row.real_kg),
+            valores
+          };
+        });
+        setNutrientes(Object.values(nutrientesMap));
+        setIngredientes(novosIngredientes);
+        setCarregando(false);
+        setStatusSupabase('');
+      })
+      .catch((e: Error) => {
+        setCarregando(false);
+        setStatusSupabase('Erro ao carregar do Supabase: ' + e.message);
+      });
+  }, []);
+
+  useEffect(() => {
+    carregarFormulacoes();
+    carregarMisturas();
+  }, [carregarFormulacoes, carregarMisturas]);
+
+  function persistIngrediente(id: string, campos: { nome?: string; real_kg?: number; info_nutricional?: Record<string, InfoNutricionalValor> }) {
+    SupabaseAPI.atualizarFormulacao(id, campos).catch((e: Error) => setStatusSupabase('Erro ao salvar: ' + e.message));
+  }
+
+  function buildInfoNutricional(lista: Nutriente[], valores: Record<string, string>): Record<string, InfoNutricionalValor> {
+    const out: Record<string, InfoNutricionalValor> = {};
+    lista.forEach((n) => {
+      const v = valores[n.id];
+      if (v === undefined || v === '') return;
+      out[n.id] = { medida: n.unit, quantidade: num(v) };
+    });
+    return out;
+  }
+
+  function setValor(ingId: string, nutId: string, valor: string) {
+    setIngredientes((prev) => {
+      const next = prev.map((o) => (o.id === ingId ? { ...o, valores: { ...o.valores, [nutId]: valor } } : o));
+      const atualizado = next.find((o) => o.id === ingId);
+      if (atualizado) {
+        persistIngrediente(ingId, { info_nutricional: buildInfoNutricional(nutrientes, atualizado.valores) });
+      }
+      return next;
+    });
+  }
+
+  // ---- derived values ----
+
+  const pctMode = modo === 'pct';
+  const batchNum = num(batch);
+  const sacoNum = num(saco);
+
+  const somaPct = linhas.reduce((acc, l) => acc + num(l.pct), 0);
+  const somaKg = linhas.reduce((acc, l) => acc + num(l.kg), 0);
+  const base = pctMode ? 100 : somaKg;
+  const totalKgReal = pctMode ? batchNum : somaKg;
+
+  const ingredientesPorId = useMemo(() => {
+    const map = new Map<string, Ingrediente>();
+    ingredientes.forEach((i) => map.set(i.id, i));
+    return map;
+  }, [ingredientes]);
+
+  const custoKg = linhas.reduce((acc, l) => {
+    const frac = base > 0 ? (pctMode ? num(l.pct) : num(l.kg)) / base : 0;
+    const ing = ingredientesPorId.get(l.ingredienteId);
+    return ing ? acc + frac * num(ing.preco) : acc;
+  }, 0);
+
+  const pctFora = pctMode && Math.abs(somaPct - 100) > 0.05;
+
+  const resultado = nutrientes.map((n) => {
+    const soma = linhas.reduce((acc, l) => {
+      const frac = base > 0 ? (pctMode ? num(l.pct) : num(l.kg)) / base : 0;
+      const ing = ingredientesPorId.get(l.ingredienteId);
+      return ing ? acc + frac * num(ing.valores[n.id]) : acc;
+    }, 0);
+    return { id: n.id, label: n.label, unit: n.unit, valor: fmt(soma, n.dec) };
+  });
+
+  const abertoIng = aberto ? (ingredientesPorId.get(aberto) ?? null) : null;
+
+  const totalPctLabel = fmt(pctMode ? somaPct : base > 0 ? 100 : 0, 1) + '%';
+  const totalKgLabel = fmt(totalKgReal, totalKgReal >= 100 ? 0 : 1);
+  const custoTotalLabel = custoKg > 0 ? brl(custoKg * totalKgReal) : '—';
+  const custoKgLabel = custoKg > 0 ? brl(custoKg) : '—';
+  const custoSacoLabel = custoKg > 0 ? brl(custoKg * sacoNum) : '—';
+  const avisoText = pctFora
+    ? `A soma das porcentagens está em ${fmt(somaPct, 1)}% — ajuste para 100%.`
+    : 'Os níveis são a média ponderada dos produtos da mistura.';
+
+  // ---- actions ----
+
+  function addLinha() {
+    const primeiro = ingredientes[0];
+    setLinhas((prev) => [...prev, { id: `l${seq + 1}`, ingredienteId: primeiro ? primeiro.id : '', pct: '', kg: '' }]);
+    setSeq((s) => s + 1);
+  }
+
+  function addIngrediente() {
+    setStatusSupabase('Criando produto…');
+    SupabaseAPI.criarFormulacao({ nome: '', real_kg: null, info_nutricional: {} })
+      .then((row) => {
+        if (!row) return;
+        const novo: Ingrediente = { id: String(row.id), nome: row.nome || '', preco: '', valores: {} };
+        setIngredientes((prev) => [...prev, novo]);
+        setAberto(novo.id);
+        setStatusSupabase('');
+      })
+      .catch((e: Error) => setStatusSupabase('Erro ao criar produto: ' + e.message));
+  }
+
+  function removerProduto() {
+    if (!aberto) return;
+    const id = aberto;
+    setConfirmacao({
+      mensagem: 'Excluir este produto? Essa ação não pode ser desfeita.',
+      onConfirmar: () => {
+        SupabaseAPI.excluirFormulacao(id)
+          .then(() => {
+            setIngredientes((prev) => prev.filter((x) => x.id !== id));
+            setLinhas((prev) => prev.filter((l) => l.ingredienteId !== id));
+            setAberto(null);
+          })
+          .catch((e: Error) => setStatusSupabase('Erro ao excluir: ' + e.message));
+      }
+    });
+  }
+
+  function novaMistura() {
+    const iniciar = () => {
+      setLinhas([]);
+      setModo('pct');
+      setBatch('1000');
+      setSaco('30');
+      setMisturaAtualId(null);
+      setMisturaAtualNome('');
+      flash('Nova mistura iniciada.');
+    };
+    if (!linhas.length && !misturaAtualId) {
+      iniciar();
+      return;
+    }
+    setConfirmacao({
+      mensagem: 'Iniciar uma nova mistura? As linhas atuais não salvas serão perdidas.',
+      rotulo: 'Continuar',
+      onConfirmar: iniciar
+    });
+  }
+
+  function confirmOk() {
+    const acao = confirmacao?.onConfirmar;
+    setConfirmacao(null);
+    acao?.();
+  }
+
+  function novoCompostoConfirmar() {
+    if (!novoComposto || !novoComposto.nome.trim()) return;
+    const nome = novoComposto.nome.trim();
+    const un = novoComposto.unidade || 'g';
+    setNutrientes((prev) => [...prev, { id: nome, label: nome, unit: un, dec: un === 'mg' ? 0 : 1 }]);
+    setNovoComposto(null);
+  }
+
+  function handleRemoveNutriente(n: Nutriente) {
+    setConfirmacao({
+      mensagem: `Remover o composto "${n.label}" de todos os produtos?`,
+      onConfirmar: () => {
+        setNutrientes((prev) => prev.filter((x) => x.id !== n.id));
+      }
+    });
+  }
+
+  function carregarMistura(m: MisturaSalva) {
+    setLinhas(
+      m.itens.map((it, idx) => ({
+        id: `l${idx}`,
+        ingredienteId: it.idFormulacao ?? '',
+        pct: it.pct === null || it.pct === undefined ? '' : String(it.pct),
+        kg: it.kg === null || it.kg === undefined ? '' : String(it.kg)
+      }))
+    );
+    setModo(m.modo ?? 'pct');
+    setBatch(m.batchKg === null || m.batchKg === undefined ? '1000' : String(m.batchKg));
+    setSaco(m.sacoKg === null || m.sacoKg === undefined ? '30' : String(m.sacoKg));
+    setMisturaAtualId(m.id);
+    setMisturaAtualNome(m.nome);
+  }
+
+  function excluirMistura(m: MisturaSalva) {
+    setConfirmacao({
+      mensagem: `Excluir a mistura "${m.nome}"?`,
+      onConfirmar: () => {
+        SupabaseAPI.excluirMistura(m.id)
+          .then(() => {
+            setMisturas((prev) => prev.filter((x) => x.id !== m.id));
+            if (misturaAtualId === m.id) {
+              setMisturaAtualId(null);
+              setMisturaAtualNome('');
+            }
+          })
+          .catch((e: Error) => setStatusSupabase('Erro ao excluir mistura: ' + e.message));
+      }
+    });
+  }
+
+  function salvarMisturaConfirmar() {
+    const nome = salvarMisturaAberto?.nome.trim() ?? '';
+    if (!nome) return;
+    const payloadMistura = { nome, modo, batch_kg: Math.round(batchNum), saco_kg: Math.round(sacoNum) };
+    const itens: NovoItemMistura[] = linhas
+      .filter((l) => l.ingredienteId)
+      .map((l) => ({ id_formulacao: l.ingredienteId, pct: Math.round(num(l.pct)), kg: Math.round(num(l.kg)) }));
+    setSalvarMisturaAberto(null);
+    setStatusSupabase('Salvando mistura…');
+    const idAtual = misturaAtualId;
+    const promessa = idAtual
+      ? SupabaseAPI.atualizarMistura(idAtual, payloadMistura)
+      : SupabaseAPI.criarMistura(payloadMistura);
+    promessa
+      .then((row) => {
+        const id = idAtual ?? row?.id;
+        if (id === undefined) throw new Error('Mistura sem id retornado.');
+        return SupabaseAPI.salvarItensDaMistura(id, itens).then(() => id);
+      })
+      .then((id) => {
+        setMisturaAtualId(id);
+        setMisturaAtualNome(nome);
+        setStatusSupabase('');
+        carregarMisturas();
+      })
+      .catch((e: Error) => setStatusSupabase('Erro ao salvar mistura: ' + e.message));
+  }
+
+  return (
+    <>
+      <div className="app">
+        <header className="header">
+          <div className="header-text">
+            <span className="header-eyebrow">Formulação de rações</span>
+            <h1 className="header-title">Calculadora de tabela nutricional</h1>
+          </div>
+          <p className="header-desc">
+            Cadastre os níveis de garantia de cada produto, monte a mistura em % ou kg e veja a tabela nutricional do
+            produto final.
+          </p>
+        </header>
+
+        <section className="card">
+          <div className="card-header">
+            <div className="card-header-left">
+              <span className="card-step">01</span>
+              <h2 className="card-title">Produtos cadastrados</h2>
+              <span className="card-hint">toque no produto para editar os compostos</span>
+              <span className="card-status">{carregando ? 'Carregando produtos do Supabase…' : statusSupabase}</span>
+            </div>
+            <button type="button" className="btn-dark" onClick={addIngrediente}>
+              + Produto
+            </button>
+          </div>
+          <IngredientesSection
+            ingredientes={ingredientes}
+            nutrientes={nutrientes}
+            onAbrir={setAberto}
+            onPrecoChange={(id, valor) => {
+              setIngredientes((prev) => updateById(prev, id, { preco: valor }));
+              persistIngrediente(id, { real_kg: num(valor) });
+            }}
+          />
+        </section>
+
+        <section className="card">
+          <div className="card-header">
+            <div className="card-header-left">
+              <h2 className="card-title">Misturas salvas</h2>
+              <span className="card-hint">toque no nome para carregar a mistura na seção 02</span>
+            </div>
+            <button type="button" className="btn-dark" onClick={novaMistura}>
+              + Nova mistura
+            </button>
+          </div>
+          <MisturasSection misturas={misturas} onCarregar={carregarMistura} onExcluir={excluirMistura} />
+        </section>
+
+        <div className="print-area grid-2col">
+          <MisturaSection
+            misturaAtualNome={misturaAtualNome}
+            onModoChange={setModo}
+            batch={batch}
+            saco={saco}
+            onBatchChange={setBatch}
+            onSacoChange={setSaco}
+            linhas={linhas}
+            ingredientes={ingredientes}
+            ingredientesPorId={ingredientesPorId}
+            pctMode={pctMode}
+            base={base}
+            batchNum={batchNum}
+            onLinhaSelect={(id, ingredienteId) => setLinhas((prev) => updateById(prev, id, { ingredienteId }))}
+            onLinhaPct={(id, pct) => setLinhas((prev) => updateById(prev, id, { pct }))}
+            onLinhaKg={(id, kg) => setLinhas((prev) => updateById(prev, id, { kg }))}
+            onLinhaRemove={(id) => setLinhas((prev) => prev.filter((l) => l.id !== id))}
+            onAddLinha={addLinha}
+            onSalvarMisturaAbrir={() => setSalvarMisturaAberto({ nome: misturaAtualNome || '' })}
+            totalPctLabel={totalPctLabel}
+            totalKgLabel={totalKgLabel}
+            custoTotalLabel={custoTotalLabel}
+            corTotalPct={pctFora ? '#b4451f' : '#1b1917'}
+            avisoText={avisoText}
+          />
+
+          <ResultadoSection
+            custoKgLabel={custoKgLabel}
+            custoSacoLabel={custoSacoLabel}
+            resultado={resultado}
+            onImprimir={() => window.print()}
+          />
+        </div>
+      </div>
+
+      <DrawerComposto
+        ingrediente={abertoIng}
+        nutrientes={nutrientes}
+        onClose={() => setAberto(null)}
+        onNomeChange={(nome) => {
+          if (!aberto) return;
+          setIngredientes((prev) => updateById(prev, aberto, { nome }));
+          persistIngrediente(aberto, { nome });
+        }}
+        onValorChange={(nutId, valor) => abertoIng && setValor(abertoIng.id, nutId, valor)}
+        onAddComposto={() => setNovoComposto({ nome: '', unidade: 'g' })}
+        onRemoverProduto={removerProduto}
+        onRemoveNutriente={handleRemoveNutriente}
+      />
+
+      <ConfirmModal confirmacao={confirmacao} onCancelar={() => setConfirmacao(null)} onOk={confirmOk} />
+
+      <NovoCompostoModal
+        novoComposto={novoComposto}
+        onNomeChange={(nome) => setNovoComposto((prev) => (prev ? { ...prev, nome } : prev))}
+        onUnidadeChange={(unidade) => setNovoComposto((prev) => (prev ? { ...prev, unidade } : prev))}
+        onCancelar={() => setNovoComposto(null)}
+        onConfirmar={novoCompostoConfirmar}
+      />
+
+      <SalvarMisturaModal
+        salvarMisturaAberto={salvarMisturaAberto}
+        onNomeChange={(nome) => setSalvarMisturaAberto((prev) => (prev ? { ...prev, nome } : prev))}
+        onCancelar={() => setSalvarMisturaAberto(null)}
+        onConfirmar={salvarMisturaConfirmar}
+      />
+    </>
+  );
+}
