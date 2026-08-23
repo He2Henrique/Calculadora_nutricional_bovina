@@ -23,7 +23,7 @@ a:hover { color:#a97c1e; }
 .header-title { margin:0; font-size:clamp(21px,4.6vw,30px); font-weight:600; letter-spacing:-0.01em; text-wrap:balance; }
 .header-desc { margin:0; max-width:420px; font-size:13px; line-height:1.5; color:#5d574f; text-wrap:pretty; }
 
-.card { width:100%; max-width:1180px; background:#fffefb; border:1px solid #ddd6cb; border-radius:4px; }
+.card { width:100%; max-width:1180px; background:#fffefb; border:1px solid #ddd6cb; border-radius:4px; transition:background-color .2s ease, border-color .2s ease; }
 .card-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:14px; border-bottom:1px solid #e6e0d6; }
 .card-header-left { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; }
 .card-step { font-family:'IBM Plex Mono',monospace; font-size:13px; color:#a97c1e; }
@@ -31,6 +31,12 @@ a:hover { color:#a97c1e; }
 .card-hint { font-size:12px; color:#8b847b; flex-basis:100%; }
 .card-status { font-size:12px; color:#b4451f; flex-basis:100%; }
 .card-status:empty { display:none; }
+
+.card-editando { background:#fdf7e9; border-color:#dcb96b; }
+.card-editando .card-header { border-bottom-color:#eddcae; }
+.card-editando .card-hint { color:#8a5a10; font-weight:500; }
+.badge-editando { display:inline-flex; align-items:center; font-size:11px; font-weight:600; letter-spacing:0.03em; text-transform:uppercase; color:#8a5a10; background:#f3dfa8; border-radius:999px; padding:3px 9px; }
+.btn-outline-editando { background:#fbeecb; color:#8a5a10; border-color:#dcb96b; }
 
 .btn-dark { background:#1b1917; color:#f7f4ee; border:1px solid #1b1917; border-radius:3px; padding:10px 14px; font-size:13px; font-weight:500; min-height:44px; cursor:pointer; }
 

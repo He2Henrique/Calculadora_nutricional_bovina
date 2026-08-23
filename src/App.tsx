@@ -541,6 +541,7 @@ export default function App() {
         <div className="print-area grid-2col">
           <MisturaSection
             misturaAtualNome={misturaAtualNome}
+            misturaAtualId={misturaAtualId}
             onModoChange={setModo}
             batch={batch}
             saco={saco}
@@ -603,6 +604,7 @@ export default function App() {
 
       <SalvarMisturaModal
         salvarMisturaAberto={salvarMisturaAberto}
+        editando={misturaAtualId !== null}
         onNomeChange={(nome) => setSalvarMisturaAberto((prev) => (prev ? { ...prev, nome } : prev))}
         onCancelar={() => setSalvarMisturaAberto(null)}
         onConfirmar={salvarMisturaConfirmar}
