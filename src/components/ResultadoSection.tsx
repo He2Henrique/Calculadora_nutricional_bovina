@@ -16,7 +16,6 @@ export default function ResultadoSection({ custoKgLabel, custoSacoLabel, resulta
   return (
     <section className="result-card">
       <div className="result-header">
-        <span className="result-step">03</span>
         <h2 className="result-title">Produto final</h2>
       </div>
       <div className="result-summary">
