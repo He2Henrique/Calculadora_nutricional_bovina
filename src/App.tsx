@@ -51,7 +51,6 @@ export default function App() {
   const [misturaAtualId, setMisturaAtualId] = useState<number | null>(null);
   const [misturaAtualNome, setMisturaAtualNome] = useState('');
   const [salvarMisturaAberto, setSalvarMisturaAberto] = useState<SalvarMisturaState | null>(null);
-  const [printMode, setPrintMode] = useState<boolean>(false);
 
   const flash = useCallback((msg: string) => {
     setStatusApi(msg);
