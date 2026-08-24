@@ -25,6 +25,7 @@ import MisturasSection from './components/MisturasSection';
 import MisturaSection from './components/MisturaSection';
 import ResultadoSection from './components/ResultadoSection';
 import DrawerComposto from './components/DrawerComposto';
+import ListToPrint from './components/ListToPrint';
 import ConfirmModal from './components/ConfirmModal';
 import NovoCompostoModal from './components/NovoCompostoModal';
 import SalvarMisturaModal from './components/SalvarMisturaModal';
@@ -50,6 +51,7 @@ export default function App() {
   const [misturaAtualId, setMisturaAtualId] = useState<number | null>(null);
   const [misturaAtualNome, setMisturaAtualNome] = useState('');
   const [salvarMisturaAberto, setSalvarMisturaAberto] = useState<SalvarMisturaState | null>(null);
+  const [printMode, setPrintMode] = useState<boolean>(false);
 
   const flash = useCallback((msg: string) => {
     setStatusApi(msg);
@@ -543,32 +545,46 @@ export default function App() {
           <MisturasSection misturas={misturas} onCarregar={carregarMistura} onExcluir={excluirMistura} />
         </section>
 
+        <MisturaSection
+          misturaAtualNome={misturaAtualNome}
+          misturaAtualId={misturaAtualId}
+          onModoChange={setModo}
+          batch={batch}
+          saco={saco}
+          onBatchChange={setBatch}
+          onSacoChange={setSaco}
+          linhas={linhas}
+          ingredientes={ingredientes}
+          ingredientesPorId={ingredientesPorId}
+          pctMode={pctMode}
+          base={base}
+          batchNum={batchNum}
+          onLinhaSelect={(id, ingredienteId) => setLinhas((prev) => updateById(prev, id, { ingredienteId }))}
+          onLinhaPct={(id, pct) => setLinhas((prev) => updateById(prev, id, { pct }))}
+          onLinhaKg={(id, kg) => setLinhas((prev) => updateById(prev, id, { kg }))}
+          onLinhaRemove={(id) => setLinhas((prev) => prev.filter((l) => l.id !== id))}
+          onAddLinha={addLinha}
+          onSalvarMisturaAbrir={() => setSalvarMisturaAberto({ nome: misturaAtualNome || '' })}
+          totalPctLabel={totalPctLabel}
+          totalKgLabel={totalKgLabel}
+          custoTotalLabel={custoTotalLabel}
+          corTotalPct={pctFora ? '#b4451f' : '#1b1917'}
+          avisoText={avisoText}
+        />
+
         <div className="print-area grid-2col">
-          <MisturaSection
+          <ListToPrint
             misturaAtualNome={misturaAtualNome}
-            misturaAtualId={misturaAtualId}
-            onModoChange={setModo}
             batch={batch}
             saco={saco}
-            onBatchChange={setBatch}
-            onSacoChange={setSaco}
             linhas={linhas}
-            ingredientes={ingredientes}
             ingredientesPorId={ingredientesPorId}
             pctMode={pctMode}
             base={base}
             batchNum={batchNum}
-            onLinhaSelect={(id, ingredienteId) => setLinhas((prev) => updateById(prev, id, { ingredienteId }))}
-            onLinhaPct={(id, pct) => setLinhas((prev) => updateById(prev, id, { pct }))}
-            onLinhaKg={(id, kg) => setLinhas((prev) => updateById(prev, id, { kg }))}
-            onLinhaRemove={(id) => setLinhas((prev) => prev.filter((l) => l.id !== id))}
-            onAddLinha={addLinha}
-            onSalvarMisturaAbrir={() => setSalvarMisturaAberto({ nome: misturaAtualNome || '' })}
             totalPctLabel={totalPctLabel}
             totalKgLabel={totalKgLabel}
             custoTotalLabel={custoTotalLabel}
-            corTotalPct={pctFora ? '#b4451f' : '#1b1917'}
-            avisoText={avisoText}
           />
 
           <ResultadoSection
