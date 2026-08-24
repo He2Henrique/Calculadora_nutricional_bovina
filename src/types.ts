@@ -43,6 +43,8 @@ export interface Confirmacao {
 }
 
 export interface NovoComposto {
+  id?: string;
+  campo?: 'nome' | 'unidade';
   nome: string;
   unidade: string;
 }

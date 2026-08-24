@@ -4,6 +4,7 @@ import CommitInput from './CommitInput';
 
 interface Props {
   misturaAtualNome: string;
+  misturaAtualId: number | null;
   onModoChange: (modo: Modo) => void;
   batch: string;
   saco: string;
@@ -30,6 +31,7 @@ interface Props {
 
 export default function MisturaSection({
   misturaAtualNome,
+  misturaAtualId,
   onModoChange,
   batch,
   saco,
@@ -53,17 +55,24 @@ export default function MisturaSection({
   corTotalPct,
   avisoText
 }: Props) {
+  const editando = misturaAtualId !== null;
+
   return (
-    <section className="card">
+    <section className={editando ? 'card card-editando' : 'card'}>
       <div className="card-header">
         <div className="card-header-left">
           <span className="card-step">02</span>
           <h2 className="card-title">Mistura</h2>
-          <span className="card-hint">{misturaAtualNome}</span>
+          {editando && <span className="badge-editando">Editando</span>}
+          <span className="card-hint">{editando ? `Editando "${misturaAtualNome}"` : ''}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button type="button" className="btn-outline" onClick={onSalvarMisturaAbrir}>
-            Salvar mistura
+          <button
+            type="button"
+            className={editando ? 'btn-outline btn-outline-editando' : 'btn-outline'}
+            onClick={onSalvarMisturaAbrir}
+          >
+            {editando ? 'Editar mistura' : 'Salvar mistura'}
           </button>
           <div className="segmented">
             <button type="button" className={pctMode ? 'active' : 'inactive'} onClick={() => onModoChange('pct')}>

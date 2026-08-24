@@ -3,12 +3,13 @@ import CommitInput from './CommitInput';
 
 interface Props {
   salvarMisturaAberto: SalvarMisturaState | null;
+  editando: boolean;
   onNomeChange: (nome: string) => void;
   onCancelar: () => void;
   onConfirmar: () => void;
 }
 
-export default function SalvarMisturaModal({ salvarMisturaAberto, onNomeChange, onCancelar, onConfirmar }: Props) {
+export default function SalvarMisturaModal({ salvarMisturaAberto, editando, onNomeChange, onCancelar, onConfirmar }: Props) {
   const overlayClass = 'overlay-center' + (salvarMisturaAberto ? '' : ' hidden');
   if (!salvarMisturaAberto) {
     return <div className={overlayClass} />;
@@ -18,7 +19,7 @@ export default function SalvarMisturaModal({ salvarMisturaAberto, onNomeChange, 
     <div className={overlayClass}>
       <div className="overlay-backdrop" onClick={onCancelar} />
       <div className="modal modal-tight">
-        <span className="modal-title">Salvar mistura</span>
+        <span className="modal-title">{editando ? 'Editar mistura' : 'Salvar mistura'}</span>
         <label className="modal-field">
           <span>Nome da mistura</span>
           <CommitInput

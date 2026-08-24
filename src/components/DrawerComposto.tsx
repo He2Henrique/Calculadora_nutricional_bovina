@@ -8,6 +8,8 @@ interface Props {
   onNomeChange: (nome: string) => void;
   onValorChange: (nutrienteId: string, valor: string) => void;
   onAddComposto: () => void;
+  onEditComposto: (n: Nutriente) => void;
+  onEditUnidade: (n: Nutriente) => void;
   onRemoverProduto: () => void;
   onRemoveNutriente: (n: Nutriente) => void;
 }
@@ -19,6 +21,8 @@ export default function DrawerComposto({
   onNomeChange,
   onValorChange,
   onAddComposto,
+  onEditComposto,
+  onEditUnidade,
   onRemoverProduto,
   onRemoveNutriente
 }: Props) {
@@ -58,8 +62,25 @@ export default function DrawerComposto({
           {nutrientes.map((n) => (
             <div className="composto-row" key={n.id}>
               <span className="composto-name">
-                <span>
-                  {n.label} <span className="composto-unit">{n.unit}</span>
+                <span
+                  className="composto-label"
+                  role="button"
+                  tabIndex={0}
+                  title="Editar nome do composto"
+                  onClick={() => onEditComposto(n)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onEditComposto(n)}
+                >
+                  {n.label}
+                </span>{' '}
+                <span
+                  className="composto-unit"
+                  role="button"
+                  tabIndex={0}
+                  title="Editar unidade de medida"
+                  onClick={() => onEditUnidade(n)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onEditUnidade(n)}
+                >
+                  {n.unit}
                 </span>
                 <button
                   type="button"
