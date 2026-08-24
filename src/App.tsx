@@ -13,6 +13,7 @@ import { Api } from './lib/api';
 import type { Medida, ModoApi } from './lib/api';
 import { brl, fmt, num } from './lib/format';
 import { updateById } from './lib/collections';
+import { useAuth } from './AuthContext';
 
 // Produto ainda não salvo no backend: existe só localmente até o drawer ser fechado.
 const TEMP_ID_PREFIX = 'novo-';
@@ -29,6 +30,7 @@ import NovoCompostoModal from './components/NovoCompostoModal';
 import SalvarMisturaModal from './components/SalvarMisturaModal';
 
 export default function App() {
+  const { sair } = useAuth();
   const [nutrientes, setNutrientes] = useState<Nutriente[]>([]);
   const [ingredientes, setIngredientes] = useState<Ingrediente[]>([]);
   // chave `${idFormulacao}:${idComposto}` -> id do registro em niveis-garantia,
@@ -500,6 +502,9 @@ export default function App() {
             Cadastre os níveis de garantia de cada produto, monte a mistura em % ou kg e veja a tabela nutricional do
             produto final.
           </p>
+          <button type="button" className="btn-outline" onClick={sair}>
+            Sair
+          </button>
         </header>
 
         <section className="card">

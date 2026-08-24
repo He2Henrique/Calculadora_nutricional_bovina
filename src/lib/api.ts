@@ -8,7 +8,8 @@
  * (niveis_garantia / mistura_itens), os filhos precisam ser excluídos antes.
  */
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+import { BASE_URL } from './config';
+import { getToken, logout } from './auth';
 
 export type Medida = '%' | 'g' | 'mg';
 export type ModoApi = '%' | 'kg';
@@ -63,9 +64,17 @@ function qs(filtros?: Filtros): string {
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T | null> {
-  const res = await fetch(url, options);
+  const token = getToken();
+  const headers = new Headers(options?.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const res = await fetch(url, { ...options, headers });
   const texto = await res.text();
   if (!res.ok) {
+    if (res.status === 401) {
+      logout();
+      window.dispatchEvent(new Event('auth:unauthorized'));
+    }
     throw new Error(`API (${res.status}): ${texto}`);
   }
   return texto ? (JSON.parse(texto) as T) : null;
