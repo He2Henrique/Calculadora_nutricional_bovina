@@ -16,7 +16,7 @@ export default function IngredientesSection({ ingredientes, nutrientes, onAbrir,
   }
 
   return (
-    <div className="list">
+    <div className="list list-scroll">
       {ingredientes.map((ing) => {
         const preenchidos = nutrientes.filter((n) => num(ing.valores[n.id]) > 0).length;
         return (

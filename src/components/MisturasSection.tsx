@@ -13,7 +13,7 @@ export default function MisturasSection({ misturas, onCarregar, onExcluir, busca
   }
 
   return (
-    <div className="list">
+    <div className="list list-scroll">
       {misturas.map((m) => (
         <div className="mix-row" key={m.id}>
           <button type="button" className="mix-name-btn" onClick={() => onCarregar(m)}>
