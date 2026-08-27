@@ -33,7 +33,9 @@ export default function CommitInput({ value, onCommit, className, inputMode, pla
       inputMode={inputMode}
       placeholder={placeholder}
       readOnly={readOnly}
-      onBlur={(e) => onCommit(e.target.value)}
+      onBlur={(e) => {
+        if (e.target.value !== value) onCommit(e.target.value);
+      }}
     />
   );
 }
