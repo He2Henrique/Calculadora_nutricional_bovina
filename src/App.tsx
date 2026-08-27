@@ -29,6 +29,7 @@ import ListToPrint from './components/ListToPrint';
 import ConfirmModal from './components/ConfirmModal';
 import NovoCompostoModal from './components/NovoCompostoModal';
 import SalvarMisturaModal from './components/SalvarMisturaModal';
+import ConfigScreen from './components/ConfigScreen';
 
 export default function App() {
   const { sair } = useAuth();
@@ -53,6 +54,7 @@ export default function App() {
   const [misturaAtualId, setMisturaAtualId] = useState<number | null>(null);
   const [misturaAtualNome, setMisturaAtualNome] = useState('');
   const [salvarMisturaAberto, setSalvarMisturaAberto] = useState<SalvarMisturaState | null>(null);
+  const [telaConfig, setTelaSenha] = useState(false);
 
   const flash = useCallback((msg: string) => {
     setStatusApi(msg);
@@ -505,8 +507,22 @@ export default function App() {
       .catch((e: Error) => setStatusApi('Erro ao salvar mistura: ' + e.message));
   }
 
+  if (telaConfig) {
+    return <ConfigScreen onVoltar={() => setTelaSenha(false)} />;
+  }
+
   return (
     <>
+      <button
+        type="button"
+        className="config-btn-fixed"
+        onClick={() => setTelaSenha(true)}
+        aria-label="Configurações"
+        title="Configurações"
+      >
+        ⚙
+      </button>
+
       <div className="app">
         <header className="header">
           <div className="header-text">

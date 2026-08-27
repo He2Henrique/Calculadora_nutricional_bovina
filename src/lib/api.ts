@@ -49,6 +49,12 @@ export interface MisturaItem {
   kg: number;
 }
 
+export interface Usuario {
+  id: number;
+  email: string;
+  ativo: boolean;
+}
+
 type Filtros = Record<string, string | number | undefined>;
 
 function endpoint(recurso: string, id?: number | string): string {
@@ -180,5 +186,20 @@ export const Api = {
     await Promise.all(existentes.map((it) => Api.excluirMisturaItem(it.id)));
     if (!itens.length) return;
     await Promise.all(itens.map((it) => Api.criarMisturaItem({ id_mistura: idMistura, ...it })));
-  }
+  },
+
+  // ---- Usuário logado ----
+
+  async atualizarMinhaSenha(senha: string): Promise<void> {
+    await request<unknown>(`${BASE_URL}/usuarios/me/senha`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senha })
+    });
+  },
+
+  // ---- Usuários ----
+
+  listarUsuarios: () => get<Usuario>('usuarios', { order_by: 'email' }),
+  criarUsuario: (usuario: { email: string; senha: string }) => post<Usuario>('usuarios', usuario)
 };
