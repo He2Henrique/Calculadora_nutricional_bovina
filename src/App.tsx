@@ -48,6 +48,8 @@ export default function App() {
   const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
   const [novoComposto, setNovoComposto] = useState<NovoComposto | null>(null);
   const [misturas, setMisturas] = useState<MisturaSalva[]>([]);
+  const [buscaProdutos, setBuscaProdutos] = useState('');
+  const [buscaMisturas, setBuscaMisturas] = useState('');
   const [misturaAtualId, setMisturaAtualId] = useState<number | null>(null);
   const [misturaAtualNome, setMisturaAtualNome] = useState('');
   const [salvarMisturaAberto, setSalvarMisturaAberto] = useState<SalvarMisturaState | null>(null);
@@ -190,6 +192,18 @@ export default function App() {
     ingredientes.forEach((i) => map.set(i.id, i));
     return map;
   }, [ingredientes]);
+
+  const ingredientesFiltrados = useMemo(() => {
+    const termo = buscaProdutos.trim().toLowerCase();
+    if (!termo) return ingredientes;
+    return ingredientes.filter((i) => i.nome.toLowerCase().includes(termo));
+  }, [ingredientes, buscaProdutos]);
+
+  const misturasFiltradas = useMemo(() => {
+    const termo = buscaMisturas.trim().toLowerCase();
+    if (!termo) return misturas;
+    return misturas.filter((m) => m.nome.toLowerCase().includes(termo));
+  }, [misturas, buscaMisturas]);
 
   const custoKg = linhas.reduce((acc, l) => {
     const frac = base > 0 ? (pctMode ? num(l.pct) : num(l.kg)) / base : 0;
@@ -519,9 +533,19 @@ export default function App() {
             <button type="button" className="btn-dark" onClick={addIngrediente}>
               + Produto
             </button>
+            <div className="card-search-wrap">
+              <input
+                type="text"
+                className="card-search"
+                placeholder="Buscar produto pelo nome…"
+                value={buscaProdutos}
+                onChange={(e) => setBuscaProdutos(e.target.value)}
+              />
+            </div>
           </div>
           <IngredientesSection
-            ingredientes={ingredientes}
+            ingredientes={ingredientesFiltrados}
+            buscaAtiva={buscaProdutos.trim().length > 0}
             nutrientes={nutrientes}
             onAbrir={setAberto}
             onPrecoChange={(id, valor) => {
@@ -540,8 +564,22 @@ export default function App() {
             <button type="button" className="btn-dark" onClick={novaMistura}>
               + Nova mistura
             </button>
+            <div className="card-search-wrap">
+              <input
+                type="text"
+                className="card-search"
+                placeholder="Buscar mistura pelo nome…"
+                value={buscaMisturas}
+                onChange={(e) => setBuscaMisturas(e.target.value)}
+              />
+            </div>
           </div>
-          <MisturasSection misturas={misturas} onCarregar={carregarMistura} onExcluir={excluirMistura} />
+          <MisturasSection
+            misturas={misturasFiltradas}
+            buscaAtiva={buscaMisturas.trim().length > 0}
+            onCarregar={carregarMistura}
+            onExcluir={excluirMistura}
+          />
         </section>
 
         <MisturaSection

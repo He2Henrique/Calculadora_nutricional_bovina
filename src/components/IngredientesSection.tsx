@@ -7,11 +7,12 @@ interface Props {
   nutrientes: Nutriente[];
   onAbrir: (id: string) => void;
   onPrecoChange: (id: string, valor: string) => void;
+  buscaAtiva?: boolean;
 }
 
-export default function IngredientesSection({ ingredientes, nutrientes, onAbrir, onPrecoChange }: Props) {
+export default function IngredientesSection({ ingredientes, nutrientes, onAbrir, onPrecoChange, buscaAtiva }: Props) {
   if (!ingredientes.length) {
-    return <div className="empty-hint">Nenhum produto cadastrado.</div>;
+    return <div className="empty-hint">{buscaAtiva ? 'Nenhum produto encontrado.' : 'Nenhum produto cadastrado.'}</div>;
   }
 
   return (

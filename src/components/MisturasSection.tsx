@@ -4,11 +4,12 @@ interface Props {
   misturas: MisturaSalva[];
   onCarregar: (m: MisturaSalva) => void;
   onExcluir: (m: MisturaSalva) => void;
+  buscaAtiva?: boolean;
 }
 
-export default function MisturasSection({ misturas, onCarregar, onExcluir }: Props) {
+export default function MisturasSection({ misturas, onCarregar, onExcluir, buscaAtiva }: Props) {
   if (!misturas.length) {
-    return <div className="empty-hint">Nenhuma mistura salva.</div>;
+    return <div className="empty-hint">{buscaAtiva ? 'Nenhuma mistura encontrada.' : 'Nenhuma mistura salva.'}</div>;
   }
 
   return (
