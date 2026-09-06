@@ -7,13 +7,15 @@ import type {
   MisturaSalva,
   Nutriente,
   NovoComposto,
-  SalvarMisturaState
+  SalvarMisturaState,
+  Tab
 } from './types';
 import { Api } from './lib/api';
 import type { Medida, ModoApi } from './lib/api';
 import { brl, fmt, num } from './lib/format';
 import { updateById } from './lib/collections';
 import { useAuth } from './AuthContext';
+
 
 // Produto ainda não salvo no backend: existe só localmente até o drawer ser fechado.
 const TEMP_ID_PREFIX = 'novo-';
@@ -30,6 +32,13 @@ import ConfirmModal from './components/ConfirmModal';
 import NovoCompostoModal from './components/NovoCompostoModal';
 import SalvarMisturaModal from './components/SalvarMisturaModal';
 import ConfigScreen from './components/ConfigScreen';
+import TabMenu from './components/TabMenu';
+
+const tabs = [
+  { id: "main", label: "Calculadora de tabela nutricional", eyebrow: "Formulação de rações" },
+  { id: "settings", label: "Configurações", eyebrow: "cofigurações internas do sistema" },
+  { id: "billing", label: "Billing", eyebrow: "This is the Billing tab content." },
+];
 
 export default function App() {
   const { sair } = useAuth();
@@ -55,6 +64,7 @@ export default function App() {
   const [misturaAtualNome, setMisturaAtualNome] = useState('');
   const [salvarMisturaAberto, setSalvarMisturaAberto] = useState<SalvarMisturaState | null>(null);
   const [telaConfig, setTelaSenha] = useState(false);
+  const [tabSelected, setTab] = useState<Tab>(tabs[0]);
 
   const flash = useCallback((msg: string) => {
     setStatusApi(msg);
@@ -179,6 +189,8 @@ export default function App() {
   }
 
   // ---- derived values ----
+
+  
 
   const pctMode = modo === 'pct';
   const batchNum = num(batch);
@@ -523,11 +535,13 @@ export default function App() {
         ⚙
       </button>
 
+      <TabMenu tabs={tabs} activeTab={tabSelected} setSection={setTab}/>
+
       <div className="app">
         <header className="header">
           <div className="header-text">
-            <span className="header-eyebrow">Formulação de rações</span>
-            <h1 className="header-title">Calculadora de tabela nutricional</h1>
+            <span className="header-eyebrow">{tabSelected.eyebrow}</span>
+            <h1 className="header-title">{tabSelected.label}</h1>
           </div>
           <p className="header-desc">
             Cadastre os níveis de garantia de cada produto, monte a mistura em % ou kg e veja a tabela nutricional do

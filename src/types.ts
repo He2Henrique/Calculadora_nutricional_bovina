@@ -52,3 +52,9 @@ export interface NovoComposto {
 export interface SalvarMisturaState {
   nome: string;
 }
+
+export interface Tab {
+    id: string;
+    label: String;
+    eyebrow: String;
+}
