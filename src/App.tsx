@@ -23,8 +23,8 @@ function isTemp(id: string): boolean {
   return id.startsWith(TEMP_ID_PREFIX);
 }
 import IngredientesSection from './components/IngredientesSection';
-import MisturasSection from './components/MisturasSection';
-import MisturaSection from './components/MisturaSection';
+import MisturasSection from './components/MisturasSalvasSection';
+import MisturaSection, { MISTURA_SECTION_ID } from './components/MisturaSection';
 import ResultadoSection from './components/ResultadoSection';
 import DrawerComposto from './components/DrawerComposto';
 import ListToPrint from './components/ListToPrint';
@@ -465,6 +465,17 @@ export default function App() {
     setMisturaAtualId(m.id);
     setMisturaAtualNome(m.nome);
     flash(`Mistura "${m.nome}" carregada.`);
+    focarSecaoMistura();
+  }
+
+  // Leva a página até a seção 02 para o usuário continuar a edição ali.
+  function focarSecaoMistura() {
+    requestAnimationFrame(() => {
+      const secao = document.getElementById(MISTURA_SECTION_ID);
+      if (!secao) return;
+      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      secao.focus({ preventScroll: true });
+    });
   }
 
   function excluirMistura(m: MisturaSalva) {

@@ -2,6 +2,9 @@ import type { Ingrediente, Linha, Modo } from '../types';
 import { brl, fmt, num } from '../lib/format';
 import CommitInput from './CommitInput';
 
+// Usado por quem precisa rolar a página até esta seção (ex.: ao carregar uma mistura salva).
+export const MISTURA_SECTION_ID = 'mistura-section';
+
 interface Props {
   misturaAtualNome: string;
   misturaAtualId: number | null;
@@ -58,7 +61,7 @@ export default function MisturaSection({
   const editando = misturaAtualId !== null;
 
   return (
-    <section className={editando ? 'card card-editando' : 'card'}>
+    <section id={MISTURA_SECTION_ID} tabIndex={-1} className={editando ? 'card card-editando' : 'card'}>
       <div className="card-header">
         <div className="card-header-left">
           <span className="card-step">02</span>
