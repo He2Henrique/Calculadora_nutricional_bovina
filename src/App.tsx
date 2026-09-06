@@ -478,6 +478,14 @@ export default function App() {
     });
   }
 
+  // Mantém as linhas atuais mas desvincula da mistura salva, virando uma nova ao salvar.
+  function duplicarMistura() {
+    setMisturaAtualId(null);
+    setMisturaAtualNome(misturaAtualNome ? `${misturaAtualNome} (cópia)` : '');
+    flash('Cópia criada. Salve para gerar a nova mistura.');
+    focarSecaoMistura();
+  }
+
   function excluirMistura(m: MisturaSalva) {
     setConfirmacao({
       mensagem: `Excluir a mistura "${m.nome}"?`,
@@ -643,6 +651,7 @@ export default function App() {
           onLinhaRemove={(id) => setLinhas((prev) => prev.filter((l) => l.id !== id))}
           onAddLinha={addLinha}
           onSalvarMisturaAbrir={() => setSalvarMisturaAberto({ nome: misturaAtualNome || '' })}
+          onDuplicarMistura={duplicarMistura}
           totalPctLabel={totalPctLabel}
           totalKgLabel={totalKgLabel}
           custoTotalLabel={custoTotalLabel}

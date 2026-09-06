@@ -25,6 +25,7 @@ interface Props {
   onLinhaRemove: (id: string) => void;
   onAddLinha: () => void;
   onSalvarMisturaAbrir: () => void;
+  onDuplicarMistura: () => void;
   totalPctLabel: string;
   totalKgLabel: string;
   custoTotalLabel: string;
@@ -52,6 +53,7 @@ export default function MisturaSection({
   onLinhaRemove,
   onAddLinha,
   onSalvarMisturaAbrir,
+  onDuplicarMistura,
   totalPctLabel,
   totalKgLabel,
   custoTotalLabel,
@@ -77,6 +79,11 @@ export default function MisturaSection({
           >
             {editando ? 'Editar mistura' : 'Salvar mistura'}
           </button>
+          {editando && (
+            <button type="button" className="btn-outline" onClick={onDuplicarMistura} title="Criar uma nova mistura a partir desta">
+              Duplicar como nova
+            </button>
+          )}
           <div className="segmented">
             <button type="button" className={pctMode ? 'active' : 'inactive'} onClick={() => onModoChange('pct')}>
               %
