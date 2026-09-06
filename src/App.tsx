@@ -31,13 +31,12 @@ import ListToPrint from './components/ListToPrint';
 import ConfirmModal from './components/ConfirmModal';
 import NovoCompostoModal from './components/NovoCompostoModal';
 import SalvarMisturaModal from './components/SalvarMisturaModal';
-import ConfigScreen from './components/ConfigScreen';
+import ConfigScreen from './pages/ConfigScreen';
 import TabMenu from './components/TabMenu';
 
 const tabs = [
-  { id: "main", label: "Calculadora de tabela nutricional", eyebrow: "Formulação de rações" },
+  { id: "main", label: "Calculadora nutricional", eyebrow: "Formulação de rações" },
   { id: "settings", label: "Configurações", eyebrow: "cofigurações internas do sistema" },
-  { id: "billing", label: "Billing", eyebrow: "This is the Billing tab content." },
 ];
 
 export default function App() {
@@ -63,7 +62,6 @@ export default function App() {
   const [misturaAtualId, setMisturaAtualId] = useState<number | null>(null);
   const [misturaAtualNome, setMisturaAtualNome] = useState('');
   const [salvarMisturaAberto, setSalvarMisturaAberto] = useState<SalvarMisturaState | null>(null);
-  const [telaConfig, setTelaSenha] = useState(false);
   const [tabSelected, setTab] = useState<Tab>(tabs[0]);
 
   const flash = useCallback((msg: string) => {
@@ -538,22 +536,17 @@ export default function App() {
       .catch((e: Error) => setStatusApi('Erro ao salvar mistura: ' + e.message));
   }
 
-  if (telaConfig) {
-    return <ConfigScreen onVoltar={() => setTelaSenha(false)} />;
+  if (tabSelected.id === 'settings') {
+    return (
+      <>
+        <TabMenu tabs={tabs} activeTab={tabSelected} setSection={setTab} />
+        <ConfigScreen />
+      </>
+    );
   }
 
   return (
     <>
-      <button
-        type="button"
-        className="config-btn-fixed"
-        onClick={() => setTelaSenha(true)}
-        aria-label="Configurações"
-        title="Configurações"
-      >
-        ⚙
-      </button>
-
       <TabMenu tabs={tabs} activeTab={tabSelected} setSection={setTab}/>
 
       <div className="app">

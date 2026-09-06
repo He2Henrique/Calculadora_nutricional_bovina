@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { Api } from '../lib/api';
 import type { Usuario } from '../lib/api';
 
-export default function ConfigScreen({ onVoltar }: { onVoltar: () => void }) {
+export default function ConfigScreen() {
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
   const [salvandoSenha, setSalvandoSenha] = useState(false);
@@ -77,9 +77,6 @@ export default function ConfigScreen({ onVoltar }: { onVoltar: () => void }) {
           <span className="header-eyebrow">Configurações</span>
           <h1 className="header-title">Configurações</h1>
         </div>
-        <button type="button" className="btn-outline" onClick={onVoltar}>
-          Voltar
-        </button>
       </header>
 
       <section className="card login-card">
